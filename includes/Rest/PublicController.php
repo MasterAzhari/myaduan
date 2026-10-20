@@ -1,6 +1,8 @@
 <?php
 namespace MyAduan\Rest;
 
+use MyAduan\Files;
+use MyAduan\ImageProcessor;
 use MyAduan\RateLimit;
 use MyAduan\Validator;
 use MyAduan\WorkflowException;
@@ -48,11 +50,19 @@ final class PublicController extends Controller
                 'lng' => $req->get_param('lng'),
                 'consent' => in_array($req->get_param('consent'), [true, 'true', '1', 1], true),
             ]);
-            if ($check['errors']) {
-                throw new FieldErrors($check['errors']);
+            $errors = $check['errors'];
+            $images = [];
+            try {
+                $images = $this->images(Files::normalize_uploads($req->get_file_params()));
+            } catch (WorkflowException $e) {
+                $errors['images'] = $e->getMessage();
+            }
+            if ($errors) {
+                throw new FieldErrors($errors);
             }
             $data = $check['data'];
-            $hash = hash('sha256', wp_json_encode($data, JSON_UNESCAPED_UNICODE));
+            // The hash covers the photos too, so a retry with different photos is not a silent duplicate.
+            $hash = hash('sha256', wp_json_encode($data, JSON_UNESCAPED_UNICODE) . implode('', array_column($images, 'source_sha256')));
 
             if (!RateLimit::allows('submit', self::SUBMIT_PER_HOUR)) {
                 // An exact retry of an earlier submission still gets its reference back.
@@ -61,7 +71,7 @@ final class PublicController extends Controller
                     throw new WorkflowException('Terlalu banyak aduan dari peranti ini. Cuba lagi dalam sejam.', 'rate_limited', 429);
                 }
             } else {
-                $result = $this->cases->create($data, $client_key, $hash);
+                $result = $this->cases->create($data, $client_key, $hash, $images);
                 if (!$result['duplicate']) {
                     RateLimit::hit('submit', HOUR_IN_SECONDS);
                 }
@@ -79,5 +89,34 @@ final class PublicController extends Controller
             RateLimit::hit('track', HOUR_IN_SECONDS);
             return $this->cases->track((string) $req->get_param('query'));
         });
+    }
+
+    /**
+     * Validates and re-encodes uploaded photos before anything is saved.
+     *
+     * @param list<array{tmp_name:string, name:string, error:int, size:int}> $uploads
+     */
+    private function images(array $uploads): array
+    {
+        if (count($uploads) > Files::MAX_PUBLIC) {
+            throw new WorkflowException('Maksimum ' . Files::MAX_PUBLIC . ' gambar.', 'invalid_image');
+        }
+        $tmp_root = realpath(ini_get('upload_tmp_dir') ?: sys_get_temp_dir());
+        $out = [];
+        foreach ($uploads as $i => $u) {
+            $label = 'Gambar ' . ($i + 1);
+            if ($u['error'] === UPLOAD_ERR_INI_SIZE || $u['error'] === UPLOAD_ERR_FORM_SIZE) {
+                throw new WorkflowException("$label mesti kurang daripada 5 MB.", 'invalid_image');
+            }
+            $path = realpath($u['tmp_name']);
+            // Only PHP's own upload temp files are accepted, never an arbitrary server path.
+            if ($u['error'] !== UPLOAD_ERR_OK || !$path || !$tmp_root || !str_starts_with($path, $tmp_root . DIRECTORY_SEPARATOR)) {
+                throw new WorkflowException("$label gagal dimuat naik. Cuba lagi.", 'invalid_image');
+            }
+            $img = ImageProcessor::process((string) file_get_contents($path), $label);
+            $img['name'] = $u['name'] ?: "gambar-" . ($i + 1) . '.' . $img['ext'];
+            $out[] = $img;
+        }
+        return $out;
     }
 }

@@ -20,9 +20,10 @@ final class Cases
      * same payload returns the original reference instead of a duplicate.
      *
      * @param array{name:string, ic:string, phone:string, details:string, location:string, lat:?float, lng:?float} $data
+     * @param list<array{bytes:string, mime:string, ext:string, name:string}> $images Already processed by ImageProcessor.
      * @return array{id:int, reference:string, duplicate:bool}
      */
-    public function create(array $data, string $client_key, string $payload_hash): array
+    public function create(array $data, string $client_key, string $payload_hash, array $images = []): array
     {
         if (!preg_match('/^[a-f0-9]{64}$/D', $client_key) || !preg_match('/^[a-f0-9]{64}$/D', $payload_hash)) {
             throw new WorkflowException('Kunci penghantaran tidak sah.', 'invalid_key', 400);
@@ -32,6 +33,7 @@ final class Cases
             if ($existing) {
                 return $existing;
             }
+            $written = [];
             $this->begin();
             try {
                 $now = self::now();
@@ -62,11 +64,18 @@ final class Cases
                 ]) === false) {
                     throw new \RuntimeException('insert_submission');
                 }
-                $this->event($id, 0, 'CIPTA', null, Workflow::RECEIVED, null, null, null, $now);
+                foreach (Files::write($reference, $images, 'public', 0, $now, $written) as $att) {
+                    if ($this->db->insert(Schema::table('attachments'), ['case_id' => $id] + $att) === false) {
+                        throw new \RuntimeException('insert_attachment');
+                    }
+                }
+                $this->event($id, 0, 'CIPTA', null, Workflow::RECEIVED, null, $images ? ['gambar' => [0, count($images)]] : null, null, $now);
                 $this->commit();
+                do_action('myaduan_case_created', $id, $reference);
                 return ['id' => $id, 'reference' => $reference, 'duplicate' => false];
             } catch (\RuntimeException $e) {
                 $this->rollback();
+                Files::delete_paths($written);
                 // A concurrent request with the same key, or a reference collision: look again and retry.
                 if ($attempt === 2) {
                     throw new WorkflowException('Aduan belum dapat disimpan. Cuba hantar semula.', 'save_failed', 500);
@@ -293,6 +302,23 @@ final class Cases
         ];
     }
 
+    /**
+     * Resolves an attachment for an authorized actor and logs the access.
+     *
+     * @return array{path:string, mime:string, name:string}
+     */
+    public function attachment(array $actor, int $attachment_id): array
+    {
+        $att = $this->db->get_row($this->db->prepare('SELECT * FROM ' . Schema::table('attachments') . ' WHERE id = %d', $attachment_id), ARRAY_A);
+        $row = $att ? $this->row((int) $att['case_id']) : null;
+        $path = $att ? Files::resolve($att['path']) : null;
+        if (!$row || !$path || !Access::can_view($actor, self::access_shape($row))) {
+            throw new WorkflowException('Fail tidak ditemui.', 'not_found', 404);
+        }
+        $this->db->insert(Schema::table('access_log'), ['case_id' => (int) $att['case_id'], 'actor_id' => $actor['id'], 'what' => 'BUKA_FAIL', 'created_at' => self::now()]);
+        return ['path' => $path, 'mime' => $att['mime'], 'name' => $att['original_name'] ?: basename($path)];
+    }
+
     /** Hints for the UI; the server still enforces every rule in operate(). */
     private function allowed_operations(array $actor, array $row, bool $is_owner): array
     {
@@ -373,6 +399,7 @@ final class Cases
             $this->rollback();
             throw $e;
         }
+        do_action('myaduan_case_operated', $id, $op, $actor, $row['status'], $result['status'], $changes);
         return $this->get($actor, $id, false);
     }
 
