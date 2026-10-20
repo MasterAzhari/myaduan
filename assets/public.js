@@ -197,7 +197,13 @@
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
     }
 
-    async addFiles(list) {
+    addFiles(list) {
+      // Submit waits for this, so a photo still being resized is never left out.
+      this.pending = (this.pending || Promise.resolve()).then(() => this.processFiles(list));
+      return this.pending;
+    }
+
+    async processFiles(list) {
       this.setError('images', '');
       for (const file of Array.from(list)) {
         if (this.files.length >= MAX_IMAGES) { this.setError('images', `Maksimum ${MAX_IMAGES} gambar.`); break; }
@@ -249,6 +255,12 @@
       this.showBanner('');
       const errors = this.validate();
       if (Object.keys(errors).length) return this.applyErrors(errors);
+
+      if (this.pending) {
+        this.submitBtn.disabled = true;
+        this.submitBtn.textContent = 'Memproses gambar…';
+        await this.pending;
+      }
 
       const fd = new FormData();
       fd.append('client_key', this.state.key);

@@ -51,9 +51,9 @@ final class PublicController extends Controller
                 'consent' => in_array($req->get_param('consent'), [true, 'true', '1', 1], true),
             ]);
             $errors = $check['errors'];
-            $images = [];
+            $uploads = [];
             try {
-                $images = $this->images(Files::normalize_uploads($req->get_file_params()));
+                $uploads = $this->uploads(Files::normalize_uploads($req->get_file_params()));
             } catch (WorkflowException $e) {
                 $errors['images'] = $e->getMessage();
             }
@@ -62,21 +62,29 @@ final class PublicController extends Controller
             }
             $data = $check['data'];
             // The hash covers the photos too, so a retry with different photos is not a silent duplicate.
-            $hash = hash('sha256', wp_json_encode($data, JSON_UNESCAPED_UNICODE) . implode('', array_column($images, 'source_sha256')));
+            $hash = hash('sha256', wp_json_encode($data, JSON_UNESCAPED_UNICODE) . implode('', array_column($uploads, 'sha256')));
 
-            if (!RateLimit::allows('submit', self::SUBMIT_PER_HOUR)) {
-                // An exact retry of an earlier submission still gets its reference back.
-                $result = $this->cases->existing_submission($client_key, $hash);
-                if (!$result) {
+            // An exact retry of an earlier submission gets its reference back, even over the limit.
+            $result = $this->cases->existing_submission($client_key, $hash);
+            if (!$result) {
+                // Count the attempt before decoding any image, so the limit also caps that work.
+                if (!RateLimit::allows('submit', self::SUBMIT_PER_HOUR)) {
                     throw new WorkflowException('Terlalu banyak aduan dari peranti ini. Cuba lagi dalam sejam.', 'rate_limited', 429);
                 }
-            } else {
-                $result = $this->cases->create($data, $client_key, $hash, $images);
-                if (!$result['duplicate']) {
-                    RateLimit::hit('submit', HOUR_IN_SECONDS);
+                RateLimit::hit('submit', HOUR_IN_SECONDS);
+                $images = [];
+                try {
+                    foreach ($uploads as $i => $u) {
+                        $img = ImageProcessor::process((string) file_get_contents($u['path']), 'Gambar ' . ($i + 1));
+                        $img['name'] = $u['name'] ?: 'gambar-' . ($i + 1) . '.' . $img['ext'];
+                        $images[] = $img;
+                    }
+                } catch (WorkflowException $e) {
+                    throw new FieldErrors(['images' => $e->getMessage()]);
                 }
+                $result = $this->cases->create($data, $client_key, $hash, $images);
             }
-            return ['reference' => $result['reference'], 'duplicate' => $result['duplicate']];
+            return ['reference' => $result['reference'], 'duplicate' => $result['duplicate'], 'images' => count($uploads)];
         }, 201);
     }
 
@@ -92,11 +100,12 @@ final class PublicController extends Controller
     }
 
     /**
-     * Validates and re-encodes uploaded photos before anything is saved.
+     * Cheap checks on uploaded files (count, size, origin) without decoding them.
      *
      * @param list<array{tmp_name:string, name:string, error:int, size:int}> $uploads
+     * @return list<array{path:string, name:string, sha256:string}>
      */
-    private function images(array $uploads): array
+    private function uploads(array $uploads): array
     {
         if (count($uploads) > Files::MAX_PUBLIC) {
             throw new WorkflowException('Maksimum ' . Files::MAX_PUBLIC . ' gambar.', 'invalid_image');
@@ -113,9 +122,10 @@ final class PublicController extends Controller
             if ($u['error'] !== UPLOAD_ERR_OK || !$path || !$tmp_root || !str_starts_with($path, $tmp_root . DIRECTORY_SEPARATOR)) {
                 throw new WorkflowException("$label gagal dimuat naik. Cuba lagi.", 'invalid_image');
             }
-            $img = ImageProcessor::process((string) file_get_contents($path), $label);
-            $img['name'] = $u['name'] ?: "gambar-" . ($i + 1) . '.' . $img['ext'];
-            $out[] = $img;
+            if (filesize($path) > ImageProcessor::MAX_BYTES) {
+                throw new WorkflowException("$label mesti kurang daripada 5 MB.", 'invalid_image');
+            }
+            $out[] = ['path' => $path, 'name' => $u['name'], 'sha256' => hash_file('sha256', $path)];
         }
         return $out;
     }

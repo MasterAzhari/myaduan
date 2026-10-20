@@ -58,11 +58,12 @@ await page.screenshot({ path: `${SHOTS}/3-borang-diisi.png`, fullPage: true });
 await page.reload();
 await page.locator('myaduan-borang form').waitFor();
 assert(await form.locator('#f-details').inputValue() !== '', 'draf kekal selepas muat semula');
-await form.locator('input[type=file]').setInputFiles({ name: 'lampu.png', mimeType: 'image/png', buffer: png(1200, 900) });
-await form.locator('.thumb img').waitFor();
 await form.locator('#f-consent').check();
-
+// Submit straight after picking a large photo: the form must wait for resizing, not drop the photo.
+await form.locator('input[type=file]').setInputFiles({ name: 'lampu.png', mimeType: 'image/png', buffer: png(4000, 3000) });
+const submitted = page.waitForResponse((r) => r.url().includes('/myaduan/v1/complaints'));
 await form.getByRole('button', { name: 'Hantar aduan' }).click();
+assert((await (await submitted).json()).images === 1, 'gambar yang masih diproses tetap dihantar');
 const refEl = form.locator('.ref');
 await refEl.waitFor({ timeout: 15000 });
 const ref = (await refEl.textContent()).trim();

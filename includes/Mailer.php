@@ -99,7 +99,10 @@ final class Mailer
         global $wpdb;
         $table = Schema::table('mail_queue');
         // Rows stuck in "sending" for 15 minutes are treated as failed attempts.
-        $wpdb->query($wpdb->prepare("UPDATE $table SET state = 'pending', last_error = 'timeout' WHERE state = 'sending' AND updated_at < %s", gmdate('Y-m-d H:i:s', time() - 900)));
+        $wpdb->query($wpdb->prepare(
+            "UPDATE $table SET state = IF(attempts >= %d, 'failed', 'pending'), last_error = 'timeout' WHERE state = 'sending' AND updated_at < %s",
+            self::MAX_ATTEMPTS, gmdate('Y-m-d H:i:s', time() - 900)
+        ));
         $ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM $table WHERE state = 'pending' AND attempts < %d ORDER BY id LIMIT %d", self::MAX_ATTEMPTS, self::BATCH));
         $sent = 0;
         foreach ($ids as $id) {

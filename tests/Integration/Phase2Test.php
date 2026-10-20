@@ -150,4 +150,26 @@ final class Phase2Test extends TestCase
         $this->assertStringContainsString('<myaduan-semak', do_shortcode('[myaduan_semak]'));
         $this->assertTrue(wp_script_is('myaduan-public', 'enqueued'));
     }
+
+    public function test_rate_limit_applies_before_images_are_decoded(): void
+    {
+        for ($i = 0; $i < 5; $i++) {
+            $this->submit();
+        }
+        $fake = tempnam(sys_get_temp_dir(), 'php');
+        file_put_contents($fake, 'not an image');
+        $this->tmp[] = $fake;
+        // A 422 here would mean the file was decoded although the limit was already reached.
+        [$status] = $this->submit_with_files([['tmp_name' => $fake, 'name' => 'x.jpg', 'type' => 'image/jpeg', 'error' => 0, 'size' => 12]]);
+        $this->assertSame(429, $status);
+    }
+
+    public function test_timed_out_last_attempt_becomes_failed(): void
+    {
+        global $wpdb;
+        Mailer::queue('t2', 'y@myaduan.my', 'S', 'B');
+        $wpdb->query('UPDATE ' . Schema::table('mail_queue') . " SET state = 'sending', attempts = 3, updated_at = '2020-01-01 00:00:00'");
+        Mailer::process();
+        $this->assertSame('failed', $wpdb->get_var('SELECT state FROM ' . Schema::table('mail_queue')));
+    }
 }
