@@ -1,0 +1,302 @@
+[
+ {
+  "code": "A01",
+  "name": "Jalan & Infrastruktur",
+  "group": "Infrastruktur & Kemudahan",
+  "group_order": 1
+ },
+ {
+  "code": "A02",
+  "name": "Longkang & Perparitan",
+  "group": "Infrastruktur & Kemudahan",
+  "group_order": 1
+ },
+ {
+  "code": "A03",
+  "name": "Banjir",
+  "group": "Infrastruktur & Kemudahan",
+  "group_order": 1
+ },
+ {
+  "code": "A04",
+  "name": "Lampu Jalan",
+  "group": "Infrastruktur & Kemudahan",
+  "group_order": 1
+ },
+ {
+  "code": "A40",
+  "name": "Kemudahan Awam",
+  "group": "Infrastruktur & Kemudahan",
+  "group_order": 1
+ },
+ {
+  "code": "A05",
+  "name": "Sampah & Kebersihan",
+  "group": "Utiliti & Perkhidmatan",
+  "group_order": 2
+ },
+ {
+  "code": "A07",
+  "name": "Bekalan Air",
+  "group": "Utiliti & Perkhidmatan",
+  "group_order": 2
+ },
+ {
+  "code": "A08",
+  "name": "Elektrik",
+  "group": "Utiliti & Perkhidmatan",
+  "group_order": 2
+ },
+ {
+  "code": "A09",
+  "name": "Pembetungan",
+  "group": "Utiliti & Perkhidmatan",
+  "group_order": 2
+ },
+ {
+  "code": "A10",
+  "name": "Telekomunikasi",
+  "group": "Utiliti & Perkhidmatan",
+  "group_order": 2
+ },
+ {
+  "code": "A06",
+  "name": "Pokok & Landskap",
+  "group": "Alam Sekitar & Haiwan",
+  "group_order": 3
+ },
+ {
+  "code": "A36",
+  "name": "Alam Sekitar",
+  "group": "Alam Sekitar & Haiwan",
+  "group_order": 3
+ },
+ {
+  "code": "A37",
+  "name": "Sungai",
+  "group": "Alam Sekitar & Haiwan",
+  "group_order": 3
+ },
+ {
+  "code": "A38",
+  "name": "Haiwan Terbiar",
+  "group": "Alam Sekitar & Haiwan",
+  "group_order": 3
+ },
+ {
+  "code": "A11",
+  "name": "Perumahan",
+  "group": "Perumahan & Tanah",
+  "group_order": 4
+ },
+ {
+  "code": "A12",
+  "name": "Tanah",
+  "group": "Perumahan & Tanah",
+  "group_order": 4
+ },
+ {
+  "code": "A15",
+  "name": "Keselamatan / Jenayah",
+  "group": "Keselamatan & Kecemasan",
+  "group_order": 5
+ },
+ {
+  "code": "A16",
+  "name": "Dadah",
+  "group": "Keselamatan & Kecemasan",
+  "group_order": 5
+ },
+ {
+  "code": "A39",
+  "name": "Bomba & Kecemasan",
+  "group": "Keselamatan & Kecemasan",
+  "group_order": 5
+ },
+ {
+  "code": "A17",
+  "name": "Trafik",
+  "group": "Pengangkutan",
+  "group_order": 6
+ },
+ {
+  "code": "A18",
+  "name": "Pengangkutan Awam",
+  "group": "Pengangkutan",
+  "group_order": 6
+ },
+ {
+  "code": "A19",
+  "name": "Kebajikan",
+  "group": "Kebajikan & Kesihatan",
+  "group_order": 7
+ },
+ {
+  "code": "A20",
+  "name": "Bantuan Makanan",
+  "group": "Kebajikan & Kesihatan",
+  "group_order": 7
+ },
+ {
+  "code": "A21",
+  "name": "OKU",
+  "group": "Kebajikan & Kesihatan",
+  "group_order": 7
+ },
+ {
+  "code": "A22",
+  "name": "Warga Emas",
+  "group": "Kebajikan & Kesihatan",
+  "group_order": 7
+ },
+ {
+  "code": "A23",
+  "name": "Kesihatan",
+  "group": "Kebajikan & Kesihatan",
+  "group_order": 7
+ },
+ {
+  "code": "A24",
+  "name": "Hospital / Rawatan",
+  "group": "Kebajikan & Kesihatan",
+  "group_order": 7
+ },
+ {
+  "code": "A25",
+  "name": "Pendidikan - Sekolah",
+  "group": "Pendidikan & Pekerjaan",
+  "group_order": 8
+ },
+ {
+  "code": "A26",
+  "name": "Pendidikan - IPT",
+  "group": "Pendidikan & Pekerjaan",
+  "group_order": 8
+ },
+ {
+  "code": "A27",
+  "name": "Bantuan Pendidikan",
+  "group": "Pendidikan & Pekerjaan",
+  "group_order": 8
+ },
+ {
+  "code": "A28",
+  "name": "Pekerjaan",
+  "group": "Pendidikan & Pekerjaan",
+  "group_order": 8
+ },
+ {
+  "code": "A29",
+  "name": "Pekerja / Majikan",
+  "group": "Pendidikan & Pekerjaan",
+  "group_order": 8
+ },
+ {
+  "code": "A43",
+  "name": "PERKESO",
+  "group": "Pendidikan & Pekerjaan",
+  "group_order": 8
+ },
+ {
+  "code": "A44",
+  "name": "KWSP",
+  "group": "Pendidikan & Pekerjaan",
+  "group_order": 8
+ },
+ {
+  "code": "A13",
+  "name": "Lesen / Penjaja / Premis",
+  "group": "Perniagaan & Bantuan",
+  "group_order": 9
+ },
+ {
+  "code": "A30",
+  "name": "Perniagaan / Usahawan",
+  "group": "Perniagaan & Bantuan",
+  "group_order": 9
+ },
+ {
+  "code": "A45",
+  "name": "Bantuan / Peruntukan",
+  "group": "Perniagaan & Bantuan",
+  "group_order": 9
+ },
+ {
+  "code": "A31",
+  "name": "Masjid / Surau / Agama Islam",
+  "group": "Agama & Komuniti",
+  "group_order": 10
+ },
+ {
+  "code": "A32",
+  "name": "Zakat",
+  "group": "Agama & Komuniti",
+  "group_order": 10
+ },
+ {
+  "code": "A41",
+  "name": "Kampung Tradisi",
+  "group": "Agama & Komuniti",
+  "group_order": 10
+ },
+ {
+  "code": "A42",
+  "name": "Kampung Orang Asli",
+  "group": "Agama & Komuniti",
+  "group_order": 10
+ },
+ {
+  "code": "A14",
+  "name": "Penguatkuasaan PBT",
+  "group": "Kerajaan & Dokumentasi",
+  "group_order": 11
+ },
+ {
+  "code": "A33",
+  "name": "JPN / Dokumentasi",
+  "group": "Kerajaan & Dokumentasi",
+  "group_order": 11
+ },
+ {
+  "code": "A34",
+  "name": "Imigresen",
+  "group": "Kerajaan & Dokumentasi",
+  "group_order": 11
+ },
+ {
+  "code": "A35",
+  "name": "JPJ",
+  "group": "Kerajaan & Dokumentasi",
+  "group_order": 11
+ },
+ {
+  "code": "A46",
+  "name": "Surat Sokongan",
+  "group": "Kerajaan & Dokumentasi",
+  "group_order": 11
+ },
+ {
+  "code": "A47",
+  "name": "Aduan Persekutuan",
+  "group": "Kerajaan & Dokumentasi",
+  "group_order": 11
+ },
+ {
+  "code": "A48",
+  "name": "Aduan Kerajaan Negeri",
+  "group": "Kerajaan & Dokumentasi",
+  "group_order": 11
+ },
+ {
+  "code": "A49",
+  "name": "Aduan PBT",
+  "group": "Kerajaan & Dokumentasi",
+  "group_order": 11
+ },
+ {
+  "code": "A50",
+  "name": "Lain-lain",
+  "group": "Lain-lain",
+  "group_order": 12
+ }
+]

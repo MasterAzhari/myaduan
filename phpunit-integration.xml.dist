@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!-- Needs a disposable WordPress install: WP_ROOT=/path/to/public_html phpunit -c phpunit-integration.xml.dist -->
+<phpunit bootstrap="tests/bootstrap-integration.php" colors="true">
+    <testsuites>
+        <testsuite name="integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>
