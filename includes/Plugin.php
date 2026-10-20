@@ -16,6 +16,9 @@ final class Plugin
         Installer::maybe_upgrade();
         add_action('rest_api_init', [self::class, 'register_routes']);
         add_action('admin_notices', [self::class, 'health_notice']);
+        Settings::register();
+        Mailer::register();
+        Frontend::register();
     }
 
     /** Warns site administrators about setup problems that put personal data at risk. */

@@ -41,6 +41,9 @@ final class AdminController extends Controller
         register_rest_route(self::NS, $base . '/cases/(?P<id>\d+)', [
             'methods' => 'GET', 'callback' => [$this, 'get'], 'permission_callback' => [$this, 'can_work'],
         ]);
+        register_rest_route(self::NS, $base . '/files/(?P<id>\d+)', [
+            'methods' => 'GET', 'callback' => [$this, 'file'], 'permission_callback' => [$this, 'can_work'],
+        ]);
         register_rest_route(self::NS, $base . '/cases/(?P<id>\d+)/operations', [
             'methods' => 'POST', 'callback' => [$this, 'operate'], 'permission_callback' => [$this, 'can_work'],
         ]);
@@ -142,5 +145,27 @@ final class AdminController extends Controller
             }
             return $this->cases->operate(Access::actor(), (int) $req['id'], (int) $version, $op, $input, strtolower((string) $req->get_param('request_id')));
         });
+    }
+
+    /** Streams a private attachment. Links work only for a logged-in user with access to the case. */
+    public function file(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        try {
+            $file = $this->cases->attachment(Access::actor(), (int) $req['id']);
+        } catch (WorkflowException $e) {
+            return new \WP_Error('myaduan_' . $e->error_code(), $e->getMessage(), ['status' => $e->status()]);
+        }
+        if (apply_filters('myaduan_stream_files', true)) {
+            nocache_headers();
+            header('Content-Type: ' . $file['mime']);
+            header('Content-Length: ' . filesize($file['path']));
+            header('Content-Disposition: inline; filename="' . str_replace('"', '', $file['name']) . '"');
+            header('X-Content-Type-Options: nosniff');
+            header("Content-Security-Policy: default-src 'none'; img-src 'self'; style-src 'unsafe-inline'");
+            readfile($file['path']);
+            exit;
+        }
+        // Tests turn streaming off and inspect the resolved file instead.
+        return rest_ensure_response(['mime' => $file['mime'], 'name' => $file['name'], 'size' => filesize($file['path']), 'sha256' => hash_file('sha256', $file['path'])]);
     }
 }

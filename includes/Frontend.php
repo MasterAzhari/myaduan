@@ -1,0 +1,40 @@
+<?php
+namespace MyAduan;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/** Public shortcodes. The UI runs in a Shadow DOM so the theme/Elementor CSS cannot break it. */
+final class Frontend
+{
+    public static function register(): void
+    {
+        add_shortcode('myaduan_borang', [self::class, 'form']);
+        add_shortcode('myaduan_semak', [self::class, 'track']);
+    }
+
+    public static function form(): string
+    {
+        return self::mount('myaduan-borang', [
+            'privacy' => Settings::get('privacy_url'),
+            'emergency' => Settings::get('emergency_text'),
+        ]);
+    }
+
+    public static function track(): string
+    {
+        return self::mount('myaduan-semak', []);
+    }
+
+    private static function mount(string $tag, array $data): string
+    {
+        $url = plugins_url('assets/', MYADUAN_FILE);
+        wp_enqueue_script('myaduan-public', $url . 'public.js', [], MYADUAN_VERSION, ['strategy' => 'defer', 'in_footer' => true]);
+        $attrs = '';
+        foreach (['api' => rest_url('myaduan/v1'), 'css' => $url . 'public.css?ver=' . MYADUAN_VERSION] + $data as $k => $v) {
+            $attrs .= ' data-' . $k . '="' . esc_attr($v) . '"';
+        }
+        return "<$tag$attrs></$tag><noscript><p>Sila aktifkan JavaScript untuk menggunakan borang MyAduan.</p></noscript>";
+    }
+}
