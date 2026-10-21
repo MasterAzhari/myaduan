@@ -59,9 +59,6 @@ final class Portal
     /** @return array{status:int, headers:array<string,string>, body:string} */
     public static function response(\WP_User $user): array
     {
-        if (!$user->exists()) {
-            return ['status' => 302, 'headers' => ['Location' => wp_login_url(Settings::portal_url())], 'body' => ''];
-        }
         $headers = [
             'Content-Type' => 'text/html; charset=utf-8',
             'X-Frame-Options' => 'DENY',
@@ -69,6 +66,10 @@ final class Portal
             'Referrer-Policy' => 'same-origin',
             'Content-Security-Policy' => "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
         ];
+        if (!$user->exists()) {
+            // The route after # never reaches the server, so the page adds it to redirect_to before going to login.
+            return ['status' => 200, 'headers' => $headers, 'body' => self::login_page()];
+        }
         if (!user_can($user, Access::CAP_ACCESS)) {
             return ['status' => 403, 'headers' => $headers, 'body' => self::denied_page()];
         }
@@ -134,6 +135,21 @@ final class Portal
             . '</head><body><div id="app" aria-live="polite"><p class="boot">Memuatkan portal…</p></div>'
             . '<noscript><p class="boot">Sila aktifkan JavaScript untuk menggunakan portal MyAduan.</p></noscript>'
             . '</body></html>';
+    }
+
+    private static function login_page(): string
+    {
+        $assets = plugins_url('assets/', MYADUAN_FILE);
+        $config = ['login' => wp_login_url(), 'portal' => Settings::portal_url()];
+        $json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        return '<!doctype html><html lang="ms"><head><meta charset="utf-8">'
+            . '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">'
+            . '<title>Log masuk · MyAduan</title>'
+            . '<noscript><meta http-equiv="refresh" content="0;url=' . esc_url(wp_login_url(Settings::portal_url())) . '"></noscript>'
+            . '<link rel="stylesheet" href="' . esc_url($assets . 'admin.css?ver=' . rawurlencode(MYADUAN_VERSION)) . '">'
+            . '<script type="application/json" id="myaduan-config">' . $json . '</script>'
+            . '<script src="' . esc_url($assets . 'admin.js?ver=' . rawurlencode(MYADUAN_VERSION)) . '" defer></script>'
+            . '</head><body><div id="app"><p class="boot">Ke halaman log masuk…</p></div></body></html>';
     }
 
     private static function denied_page(): string

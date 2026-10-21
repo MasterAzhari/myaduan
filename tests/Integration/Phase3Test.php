@@ -43,9 +43,10 @@ final class Phase3Test extends TestCase
     public function test_portal_requires_login_and_access(): void
     {
         $r = Portal::response(new WP_User(0));
-        $this->assertSame(302, $r['status']);
-        $this->assertStringContainsString('wp-login.php', $r['headers']['Location']);
-        $this->assertStringContainsString(rawurlencode(home_url('/adminaduan/')), $r['headers']['Location']);
+        $this->assertSame(200, $r['status'], 'logged out: a page that keeps the #route and goes to login');
+        preg_match('#id="myaduan-config">(.*?)</script>#', $r['body'], $m);
+        $this->assertSame(['login' => wp_login_url(), 'portal' => home_url('/adminaduan/')], json_decode($m[1], true));
+        $this->assertStringContainsString(esc_url(wp_login_url(home_url('/adminaduan/'))), $r['body'], 'noscript fallback');
 
         $sub = $this->make_user('t_subscriber', 'subscriber');
         $r = Portal::response(new WP_User($sub));
@@ -159,6 +160,36 @@ final class Phase3Test extends TestCase
         $this->assertSame(403, $status);
         $this->assertStringContainsString('akaun sendiri', $data['message']);
         $this->assertSame(404, $this->call('POST', '/admin/users/999999', ['name' => 'Tiada'], 'super')[0]);
+    }
+
+    public function test_other_wordpress_roles_are_kept(): void
+    {
+        $officer = $this->new_officer('editor.pegawai@myaduan.my', ['mode' => 'all']);
+        (new WP_User($officer))->add_role('editor');
+        [$status] = $this->call('POST', "/admin/users/$officer", ['name' => 'Nama Baru', 'role' => 'viewer'], 'super');
+        $this->assertSame(200, $status);
+        clean_user_cache($officer);
+        $this->assertEqualsCanonicalizing(['editor', 'myaduan_viewer'], (new WP_User($officer))->roles);
+        $this->call('POST', "/admin/users/$officer", ['active' => false], 'super');
+        clean_user_cache($officer);
+        $this->assertSame(['editor'], array_values((new WP_User($officer))->roles));
+        $this->assertInstanceOf(WP_User::class, \MyAduan\Users::block_inactive(new WP_User($officer)), 'still an editor, so login stays allowed');
+    }
+
+    public function test_deactivated_account_cannot_log_in(): void
+    {
+        $officer = $this->new_officer('keluar@myaduan.my', ['mode' => 'all']);
+        wp_set_password('Kata-Laluan-123', $officer);
+        $login = get_userdata($officer)->user_login;
+        $this->assertInstanceOf(WP_User::class, wp_authenticate($login, 'Kata-Laluan-123'));
+        $this->call('POST', "/admin/users/$officer", ['active' => false], 'super');
+        clean_user_cache($officer);
+        $result = wp_authenticate($login, 'Kata-Laluan-123');
+        $this->assertInstanceOf(WP_Error::class, $result);
+        $this->assertSame('myaduan_inactive', $result->get_error_code());
+        $this->call('POST', "/admin/users/$officer", ['active' => true], 'super');
+        clean_user_cache($officer);
+        $this->assertInstanceOf(WP_User::class, wp_authenticate($login, 'Kata-Laluan-123'));
     }
 
     public function test_promote_officer_to_viewer_clears_policy(): void

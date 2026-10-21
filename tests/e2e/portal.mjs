@@ -61,7 +61,8 @@ const statusOf = (page) => page.locator('.case-head .badge').first().textContent
 /* ---- Super Admin: triage and assign (desktop) ---- */
 const desk = await browser.newPage({ viewport: { width: 1366, height: 900 } });
 watch(desk);
-await login(desk, 'e2e_super', '/adminaduan/');
+await login(desk, 'e2e_super', '/adminaduan/#/kes?flag=open');
+assert(await desk.locator('select[name=flag]').inputValue() === 'open', 'pautan #route yang di-bookmark kekal selepas log masuk');
 assert(await desk.locator('h1').textContent() === 'Senarai kes', 'Super Admin masuk ke senarai kes');
 assert(await desk.locator('.nav a', { hasText: 'Pengguna' }).isVisible(), 'menu Pengguna untuk Super Admin');
 await desk.locator('.stat', { hasText: 'Belum dikelaskan' }).click();

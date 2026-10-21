@@ -112,17 +112,32 @@ final class Users
         if (is_wp_error($updated)) {
             throw new FieldErrors(['email' => $updated->get_error_message()]);
         }
+        // Only MyAduan roles change; any other WordPress role the account has stays.
+        foreach (self::ROLES as $wp_role) {
+            $user->remove_role($wp_role);
+        }
         if ($active) {
-            $user->set_role(self::ROLES[$role]);
+            $user->add_role(self::ROLES[$role]);
             delete_user_meta($id, self::INACTIVE_META);
         } else {
-            $user->set_role('');
             update_user_meta($id, self::INACTIVE_META, self::ROLES[$role]);
             \WP_Session_Tokens::get_instance($id)->destroy_all();
         }
         $policy ? update_user_meta($id, Access::POLICY_META, $policy) : delete_user_meta($id, Access::POLICY_META);
         clean_user_cache($id);
         return $this->shape(get_userdata($id), $this->open_cases([$id])[$id] ?? []);
+    }
+
+    /**
+     * wp_authenticate_user: a deactivated MyAduan-only account cannot log in again.
+     * Accounts that still hold another WordPress role keep that access.
+     */
+    public static function block_inactive(\WP_User|\WP_Error $user): \WP_User|\WP_Error
+    {
+        if ($user instanceof \WP_User && !$user->roles && get_user_meta($user->ID, self::INACTIVE_META, true) !== '') {
+            return new \WP_Error('myaduan_inactive', 'Akaun ini telah dinyahaktifkan. Hubungi Super Admin MyAduan.');
+        }
+        return $user;
     }
 
     private function shape(\WP_User $u, array $open): array

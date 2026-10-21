@@ -3,6 +3,12 @@
   'use strict';
 
   const cfg = JSON.parse(document.getElementById('myaduan-config').textContent);
+  if (cfg.login) {
+    // Logged out: go to login and come back to the same route (the part after # is not sent to the server).
+    const back = cfg.portal + location.hash;
+    location.replace(cfg.login + (cfg.login.includes('?') ? '&' : '?') + 'redirect_to=' + encodeURIComponent(back));
+    return;
+  }
   const app = document.getElementById('app');
   const state = { me: null, catalog: null, cats: new Map(), duns: new Map(), areas: new Map(), lastList: '#/kes' };
 
