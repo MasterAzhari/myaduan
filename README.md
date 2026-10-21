@@ -2,7 +2,7 @@
 
 Sistem aduan Parlimen Gombak atas WordPress. Semua data dalam MySQL, data peribadi disulitkan, tiada Google Sheet atau Apps Script.
 
-Status: **Fasa 2**. Ada database, peranan, aliran status, REST API, borang awam, semak status, gambar private dan notifikasi e-mel. Portal admin dan dashboard datang dalam Fasa 3 dan 4.
+Status: **Fasa 3**. Ada database, peranan, aliran status, REST API, borang awam, semak status, gambar private, notifikasi e-mel dan portal admin di `/adminaduan/`. Dashboard penuh datang dalam Fasa 4.
 
 ## Pasang
 
@@ -59,6 +59,15 @@ define('MYADUAN_STORAGE_DIR', '/home/uXXXX/myaduan-files'); // kalau nak tukar l
 - Cron sebenar untuk e-mel: `define('DISABLE_WP_CRON', true);` dalam `wp-config.php`, kemudian hPanel → Advanced → Cron Jobs tiap 5 minit: `php /home/uXXXX/domains/myaduan.my/public_html/wp-cron.php`.
 - LiteSpeed Cache boleh cache page `/aduan/` dan `/semak/` (tiada data peribadi dalam HTML), tapi jangan cache `/wp-json/`.
 
+### Portal admin (`/adminaduan/`)
+
+- Halaman sendiri di luar tema (laluan boleh ubah dalam Tetapan → MyAduan). Belum log masuk → dihantar ke login WordPress, kemudian balik ke portal.
+- Akaun MyAduan sahaja (Pegawai, Super Admin MyAduan, Pemerhati) terus masuk portal selepas login dan tak boleh masuk wp-admin, kecuali halaman Profil untuk tukar kata laluan.
+- **Senarai kes**: kiraan ringkas yang boleh diklik (belum dikelaskan, belum ditugaskan, menunggu pengesahan, belum diterima, lewat susulan), carian dan tapisan. Pautan boleh di-bookmark.
+- **Butiran kes**: butiran, gambar, pengadu (telefon + WhatsApp), maklumat kes, sejarah lengkap, dan butang tindakan ikut peranan dan status.
+- **Pengguna** (Super Admin): cipta akaun (e-mel tetapan kata laluan dihantar sendiri), tukar peranan dan kategori, nyahaktif. Tak boleh nyahaktif atau buang kategori pegawai yang masih pegang kes terbuka. Akaun Administrator WordPress diurus dalam WordPress.
+- Sesuai untuk telefon; pegawai di lapangan boleh terima tugasan dan rekod tindakan dari telefon.
+
 ## Peranan
 
 | Peranan | Boleh |
@@ -88,10 +97,12 @@ Operasi: `classify`, `assign`, `accept`, `action`, `comment`, `request_close`, `
 | GET | `/admin/me` | Pengguna MyAduan |
 | GET | `/admin/catalog` | Pengguna MyAduan (senarai pegawai untuk Super Admin) |
 | GET | `/admin/stats` | Pengguna MyAduan |
-| GET | `/admin/cases` | Super Admin, Pegawai. Filter: `status`, `owner` (id atau `unassigned`), `category` (`none` = belum dikelaskan), `dun`, `area`, `q`, `ic`, `from`, `to`, `page` |
+| GET | `/admin/cases` | Super Admin, Pegawai. Filter: `status`, `flag` (`open`, `not_accepted`, `overdue`), `owner` (id atau `unassigned`), `category` (`none` = belum dikelaskan), `dun`, `area`, `q`, `ic`, `from`, `to`, `page` |
 | GET | `/admin/cases/{id}` | Super Admin, Pegawai (dicatat dalam `access_log`) |
 | GET | `/admin/files/{id}` | Super Admin, Pegawai yang ada akses kes (dicatat dalam `access_log`) |
 | POST | `/admin/cases/{id}/operations` | `op`, `version`, `request_id` (64 hex) + medan operasi |
+| GET, POST | `/admin/users` | Super Admin. POST: `name`, `email`, `role` (`superadmin`/`officer`/`viewer`), `policy` untuk pegawai |
+| POST | `/admin/users/{id}` | Super Admin. Mana-mana medan di atas + `active` |
 
 Panggilan admin guna cookie login + header `X-WP-Nonce` (`wp_create_nonce('wp_rest')`).
 
@@ -101,6 +112,7 @@ Panggilan admin guna cookie login + header `X-WP-Nonce` (`wp_create_nonce('wp_re
 phpunit                                   # ujian unit
 WP_ROOT=/path/ke/wordpress-ujian phpunit -c phpunit-integration.xml.dist   # ujian WordPress + MySQL sebenar
 CHROMIUM_PATH=... BASE_URL=http://localhost:8080 node tests/e2e/borang.mjs   # uji borang dalam browser (perlu npm i playwright)
+CHROMIUM_PATH=... BASE_URL=http://localhost:8080 node tests/e2e/portal.mjs   # uji portal: akaun e2e_super & e2e_officer (kategori A04), kata laluan E2E_PASS
 bash bin/build-zip.sh                     # hasilkan dist/myaduan-x.y.z.zip
 ```
 

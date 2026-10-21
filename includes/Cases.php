@@ -175,6 +175,15 @@ final class Cases
         if (!empty($f['dun'])) {
             $where[] = $f['dun'] === 'none' ? 'c.dun_slug IS NULL' : $this->db->prepare('c.dun_slug = %s', $f['dun']);
         }
+        if (!empty($f['flag'])) {
+            $open = "c.status <> 'DITUTUP'";
+            $where[] = match ($f['flag']) {
+                'open' => $open,
+                'not_accepted' => "$open AND c.owner_id > 0 AND c.accepted_at IS NULL",
+                'overdue' => $this->db->prepare("$open AND c.followup_at IS NOT NULL AND c.followup_at < %s", self::now()),
+                default => throw new WorkflowException('Penapis tidak sah.', 'invalid_filter', 400),
+            };
+        }
         if (!empty($f['area'])) {
             $where[] = $this->db->prepare('c.area_id = %d', (int) $f['area']);
         }
@@ -445,6 +454,7 @@ final class Cases
             'unclassified' => (int) $this->db->get_var("SELECT COUNT(*) FROM $table c WHERE $scope AND $open AND c.category_code IS NULL"),
             'unassigned' => (int) $this->db->get_var("SELECT COUNT(*) FROM $table c WHERE $scope AND $open AND c.owner_id = 0"),
             'not_accepted' => (int) $this->db->get_var("SELECT COUNT(*) FROM $table c WHERE $scope AND $open AND c.owner_id > 0 AND c.accepted_at IS NULL"),
+            'mine_open' => (int) $this->db->get_var($this->db->prepare("SELECT COUNT(*) FROM $table c WHERE $open AND c.owner_id = %d", $actor['id'])),
             'overdue' => (int) $this->db->get_var($this->db->prepare("SELECT COUNT(*) FROM $table c WHERE $scope AND $open AND c.followup_at IS NOT NULL AND c.followup_at < %s", $now)),
         ];
     }

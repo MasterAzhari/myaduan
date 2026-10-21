@@ -19,6 +19,8 @@ final class Plugin
         Settings::register();
         Mailer::register();
         Frontend::register();
+        Portal::register();
+        add_filter('wp_authenticate_user', [Users::class, 'block_inactive']);
     }
 
     /** Warns site administrators about setup problems that put personal data at risk. */
