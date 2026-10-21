@@ -19,6 +19,7 @@ final class Plugin
         Settings::register();
         Mailer::register();
         Frontend::register();
+        Portal::register();
     }
 
     /** Warns site administrators about setup problems that put personal data at risk. */

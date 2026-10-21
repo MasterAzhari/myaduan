@@ -3,6 +3,7 @@ namespace MyAduan\Rest;
 
 use MyAduan\Access;
 use MyAduan\Catalog;
+use MyAduan\Users;
 use MyAduan\Workflow;
 use MyAduan\WorkflowException;
 
@@ -47,6 +48,18 @@ final class AdminController extends Controller
         register_rest_route(self::NS, $base . '/cases/(?P<id>\d+)/operations', [
             'methods' => 'POST', 'callback' => [$this, 'operate'], 'permission_callback' => [$this, 'can_work'],
         ]);
+        register_rest_route(self::NS, $base . '/users', [
+            ['methods' => 'GET', 'callback' => [$this, 'users'], 'permission_callback' => [$this, 'can_manage']],
+            ['methods' => 'POST', 'callback' => [$this, 'create_user'], 'permission_callback' => [$this, 'can_manage']],
+        ]);
+        register_rest_route(self::NS, $base . '/users/(?P<id>\d+)', [
+            'methods' => 'POST', 'callback' => [$this, 'update_user'], 'permission_callback' => [$this, 'can_manage'],
+        ]);
+    }
+
+    public function can_manage(): bool
+    {
+        return current_user_can(Access::CAP_MANAGE);
     }
 
     public function can_access(): bool
@@ -107,7 +120,7 @@ final class AdminController extends Controller
     {
         return $this->respond(function () use ($req) {
             $filters = [];
-            foreach (['status', 'owner', 'category', 'dun', 'area', 'q', 'ic', 'from', 'to'] as $key) {
+            foreach (['status', 'owner', 'category', 'dun', 'area', 'flag', 'q', 'ic', 'from', 'to'] as $key) {
                 $value = $req->get_param($key);
                 if (is_scalar($value) && $value !== '') {
                     $filters[$key] = mb_substr(sanitize_text_field((string) $value), 0, 100);
@@ -145,6 +158,26 @@ final class AdminController extends Controller
             }
             return $this->cases->operate(Access::actor(), (int) $req['id'], (int) $version, $op, $input, strtolower((string) $req->get_param('request_id')));
         });
+    }
+
+    public function users(): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(fn() => $this->users_service()->list());
+    }
+
+    public function create_user(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(fn() => $this->users_service()->create($req->get_json_params() ?: $req->get_body_params()), 201);
+    }
+
+    public function update_user(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(fn() => $this->users_service()->update((int) $req['id'], $req->get_json_params() ?: $req->get_body_params(), get_current_user_id()));
+    }
+
+    private function users_service(): Users
+    {
+        return new Users($GLOBALS['wpdb'], new Catalog());
     }
 
     /** Streams a private attachment. Links work only for a logged-in user with access to the case. */
