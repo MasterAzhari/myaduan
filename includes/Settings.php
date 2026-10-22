@@ -21,6 +21,9 @@ final class Settings
         'home_image_url' => '',
         'home_description' => 'Laporkan masalah setempat di Parlimen Gombak dalam talian. Dapat nombor rujukan serta-merta dan semak status aduan anda sehingga selesai.',
         'home_share_image_url' => '',
+        'home_mp_name' => "YAB Dato' Seri Amirudin Shari",
+        'home_mp_title' => 'Menteri Besar Selangor merangkap Ahli Parlimen Gombak',
+        'home_mp_photo_url' => '',
     ];
 
     public static function get(string $key): string
@@ -79,6 +82,9 @@ final class Settings
             'home_image_url' => esc_url_raw((string) ($in['home_image_url'] ?? '')),
             'home_description' => sanitize_text_field((string) ($in['home_description'] ?? '')) ?: self::DEFAULTS['home_description'],
             'home_share_image_url' => esc_url_raw((string) ($in['home_share_image_url'] ?? '')),
+            'home_mp_name' => sanitize_text_field((string) ($in['home_mp_name'] ?? '')),
+            'home_mp_title' => sanitize_text_field((string) ($in['home_mp_title'] ?? '')),
+            'home_mp_photo_url' => esc_url_raw((string) ($in['home_mp_photo_url'] ?? '')),
         ];
     }
 
@@ -108,6 +114,9 @@ final class Settings
         $row('home_image_url', 'URL gambar utama (halaman utama)', 'Pilihan. Contoh: gambar Ahli Parlimen atau kawasan Gombak (nisbah 4:3 atau segi empat). Kosong = ilustrasi MyAduan.', 'url');
         $row('home_description', 'Meta description (halaman utama)', 'Ayat ringkas untuk Google dan preview link. Elok bawah 160 aksara.');
         $row('home_share_image_url', 'URL gambar preview (feature image)', 'Pilihan. Gambar bila link myaduan.my dikongsi di WhatsApp/Facebook, saiz 1200×630. Kosong = gambar MyAduan biasa.', 'url');
+        $row('home_mp_name', 'Nama Ahli Parlimen', 'Dipaparkan dalam bahagian "Inisiatif" di halaman utama. Kosong = bahagian itu disembunyikan.');
+        $row('home_mp_title', 'Jawatan Ahli Parlimen', 'Contoh: Menteri Besar Selangor merangkap Ahli Parlimen Gombak');
+        $row('home_mp_photo_url', 'URL gambar Ahli Parlimen', 'Gambar rasmi (potret, nisbah 4:5). Upload di Media, salin URL ke sini. Kosong = logo MyAduan.', 'url');
         echo '</table>';
         submit_button();
         echo '</form><h2>Shortcode</h2><p><code>[myaduan_borang]</code> borang aduan · <code>[myaduan_semak]</code> semak status</p>';
