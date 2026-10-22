@@ -24,7 +24,8 @@ Status: **Fasa 3**. Ada database, peranan, aliran status, REST API, borang awam,
 - Halaman sendiri di luar tema: apa itu MyAduan, cara buat aduan, jenis aduan (ikut kategori dalam database), perjalanan status, maklumat yang perlu disediakan, kawasan DUN, mesej kecemasan dan butang **Buat Aduan Sekarang**.
 - Hanya laman utama yang diganti. Carian, feed dan page lain kekal ikut WordPress/tema. Buang tanda untuk kembali ke halaman utama tema.
 - Pautan butang ikut **Laluan borang aduan** (`aduan`) dan **Laluan semak status** (`semak`).
-- Logo dan gambar utama boleh ditukar: upload di Media, salin URL ke **URL logo** / **URL gambar utama**. Kosong = logo dan ilustrasi MyAduan sendiri (SVG, dilukis untuk projek ini, bebas guna).
+- Logo lalai: `assets/img/logo-myaduan.png` (logo rasmi MyAduan Parlimen Gombak, juga jadi favicon kalau Site Icon WordPress kosong). Logo dan gambar utama boleh ditukar: upload di Media, salin URL ke **URL logo** / **URL gambar utama**. Ilustrasi utama (SVG) dilukis untuk projek ini.
+- **Meta description** dan **URL gambar preview** (feature image, 1200×630) untuk Google dan preview link di WhatsApp/Facebook. Gambar preview lalai: `assets/img/home-share.png`.
 - Tiada JavaScript dan tiada data peribadi, jadi LiteSpeed Cache boleh cache.
 
 ### Borang awam
