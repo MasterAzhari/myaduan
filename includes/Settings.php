@@ -116,7 +116,7 @@ final class Settings
         $row('home_share_image_url', 'URL gambar preview (feature image)', 'Pilihan. Gambar bila link myaduan.my dikongsi di WhatsApp/Facebook, saiz 1200×630. Kosong = gambar MyAduan biasa.', 'url');
         $row('home_mp_name', 'Nama Ahli Parlimen', 'Dipaparkan dalam bahagian "Inisiatif" di halaman utama. Kosong = bahagian itu disembunyikan.');
         $row('home_mp_title', 'Jawatan Ahli Parlimen', 'Contoh: Menteri Besar Selangor merangkap Ahli Parlimen Gombak');
-        $row('home_mp_photo_url', 'URL gambar Ahli Parlimen', 'Gambar rasmi (potret, nisbah 4:5). Upload di Media, salin URL ke sini. Kosong = logo MyAduan.', 'url');
+        $row('home_mp_photo_url', 'URL gambar Ahli Parlimen', 'Pilihan, untuk tukar gambar (potret, nisbah 4:5). Upload di Media, salin URL ke sini. Kosong = gambar YAB yang disertakan dalam plugin.', 'url');
         echo '</table>';
         submit_button();
         echo '</form><h2>Shortcode</h2><p><code>[myaduan_borang]</code> borang aduan · <code>[myaduan_semak]</code> semak status</p>';

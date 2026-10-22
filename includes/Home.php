@@ -138,11 +138,7 @@ final class Home
   <section class="band initiative" aria-labelledby="inisiatif-h">
     <div class="wrap initiative-in">
       <figure class="mp">
-<?php if (Settings::get('home_mp_photo_url')) : ?>
-        <img src="<?= esc_url(Settings::get('home_mp_photo_url')) ?>" alt="<?= esc_attr(Settings::get('home_mp_name')) ?>" loading="lazy">
-<?php else : ?>
-        <img class="mp-seal" src="<?= esc_url($logo) ?>" alt="" loading="lazy">
-<?php endif; ?>
+        <img src="<?= esc_url(Settings::get('home_mp_photo_url') ?: $assets . 'img/ahli-parlimen-gombak.jpg?ver=' . $ver) ?>" alt="<?= esc_attr(Settings::get('home_mp_name')) ?>" width="640" height="800" loading="lazy">
         <figcaption class="mp-name"><strong><?= esc_html(Settings::get('home_mp_name')) ?></strong><?php if (Settings::get('home_mp_title') !== '') : ?><span><?= esc_html(Settings::get('home_mp_title')) ?></span><?php endif; ?></figcaption>
       </figure>
       <div>

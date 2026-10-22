@@ -25,7 +25,7 @@ Status: **Fasa 3**. Ada database, peranan, aliran status, REST API, borang awam,
 - Hanya laman utama yang diganti. Carian, feed dan page lain kekal ikut WordPress/tema. Buang tanda untuk kembali ke halaman utama tema.
 - Pautan butang ikut **Laluan borang aduan** (`aduan`) dan **Laluan semak status** (`semak`).
 - Logo lalai: `assets/img/logo-myaduan.png` (logo rasmi MyAduan Parlimen Gombak, juga jadi favicon kalau Site Icon WordPress kosong). Logo dan gambar utama boleh ditukar: upload di Media, salin URL ke **URL logo** / **URL gambar utama**. Ilustrasi utama (SVG) dilukis untuk projek ini.
-- Bahagian **Inisiatif** Ahli Parlimen (nama, jawatan, gambar) boleh ubah dalam Settings → MyAduan. Nama kosong = bahagian disembunyikan. Tiada gambar = logo MyAduan.
+- Bahagian **Inisiatif** Ahli Parlimen (nama, jawatan, gambar) boleh ubah dalam Settings → MyAduan. Nama kosong = bahagian disembunyikan. Gambar lalai: `assets/img/ahli-parlimen-gombak.jpg` (dibekalkan oleh Azhari).
 - **Meta description** dan **URL gambar preview** (feature image, 1200×630) untuk Google dan preview link di WhatsApp/Facebook. Gambar preview lalai: `assets/img/home-share.png`.
 - Tiada JavaScript dan tiada data peribadi, jadi LiteSpeed Cache boleh cache.
 

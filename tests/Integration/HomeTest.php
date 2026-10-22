@@ -65,7 +65,7 @@ final class HomeTest extends TestCase
         update_option(Settings::OPTION, []);
         $html = Home::render();
         $this->assertStringContainsString('Amirudin Shari', $html);
-        $this->assertStringContainsString('mp-seal', $html);
+        $this->assertStringContainsString('img/ahli-parlimen-gombak.jpg', $html);
         update_option(Settings::OPTION, ['home_mp_photo_url' => 'https://myaduan.my/yab.jpg']);
         $this->assertStringContainsString('src="https://myaduan.my/yab.jpg"', Home::render());
         update_option(Settings::OPTION, ['home_mp_name' => '']);
