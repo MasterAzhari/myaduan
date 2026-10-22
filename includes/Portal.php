@@ -20,6 +20,16 @@ final class Portal
         add_filter('login_redirect', [self::class, 'login_redirect'], 10, 3);
         add_action('admin_init', [self::class, 'keep_out_of_wp_admin']);
         add_filter('show_admin_bar', [self::class, 'admin_bar']);
+        add_action('login_head', [self::class, 'login_brand']);
+        add_filter('login_headerurl', static fn() => home_url('/'));
+        add_filter('login_headertext', static fn() => 'MyAduan · Parlimen Gombak');
+    }
+
+    /** Officers log in through wp-login.php, so it shows the MyAduan logo instead of the WordPress one. */
+    public static function login_brand(): void
+    {
+        echo '<link rel="icon" href="' . esc_url(Settings::icon_url()) . '">'
+            . '<style>.login h1 a{background-image:url("' . esc_url(Settings::logo_url()) . '");background-size:contain;width:96px;height:96px}</style>' . "\n";
     }
 
     /** Whether a request path (relative to the site root) is the portal. */
@@ -122,12 +132,14 @@ final class Portal
             'home' => home_url('/'),
             'site' => get_bloginfo('name'),
             'version' => MYADUAN_VERSION,
+            'logo' => Settings::logo_url(),
         ];
         $json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         $ver = rawurlencode(MYADUAN_VERSION);
         return '<!doctype html><html lang="ms"><head><meta charset="utf-8">'
             . '<meta name="viewport" content="width=device-width, initial-scale=1">'
             . '<meta name="robots" content="noindex, nofollow">'
+            . self::icon_link()
             . '<title>Portal Admin MyAduan</title>'
             . '<link rel="stylesheet" href="' . esc_url($assets . 'admin.css?ver=' . $ver) . '">'
             . '<script type="application/json" id="myaduan-config">' . $json . '</script>'
@@ -144,6 +156,7 @@ final class Portal
         $json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         return '<!doctype html><html lang="ms"><head><meta charset="utf-8">'
             . '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">'
+            . self::icon_link()
             . '<title>Log masuk · MyAduan</title>'
             . '<noscript><meta http-equiv="refresh" content="0;url=' . esc_url(wp_login_url(Settings::portal_url())) . '"></noscript>'
             . '<link rel="stylesheet" href="' . esc_url($assets . 'admin.css?ver=' . rawurlencode(MYADUAN_VERSION)) . '">'
@@ -157,11 +170,17 @@ final class Portal
         $assets = plugins_url('assets/', MYADUAN_FILE);
         return '<!doctype html><html lang="ms"><head><meta charset="utf-8">'
             . '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">'
+            . self::icon_link()
             . '<title>Tiada akses · MyAduan</title>'
             . '<link rel="stylesheet" href="' . esc_url($assets . 'admin.css?ver=' . rawurlencode(MYADUAN_VERSION)) . '">'
-            . '</head><body><main class="denied"><h1>Tiada akses</h1>'
+            . '</head><body><main class="denied"><img class="denied-logo" src="' . esc_url(Settings::logo_url()) . '" alt="Logo MyAduan" width="72" height="72"><h1>Tiada akses</h1>'
             . '<p>Akaun ini tidak mempunyai akses ke portal MyAduan. Hubungi Super Admin jika anda perlukan akses.</p>'
             . '<p><a class="btn" href="' . esc_url(wp_logout_url(wp_login_url(Settings::portal_url()))) . '">Log keluar</a></p>'
             . '</main></body></html>';
+    }
+
+    private static function icon_link(): string
+    {
+        return '<link rel="icon" href="' . esc_url(Settings::icon_url()) . '">';
     }
 }

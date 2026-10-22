@@ -50,6 +50,18 @@ final class Settings
         return home_url('/' . trim(self::get('portal_path'), '/') . '/') . ($fragment ? '#' . $fragment : '');
     }
 
+    /** The one MyAduan logo used on every page: the uploaded official logo, or the bundled one. */
+    public static function logo_url(): string
+    {
+        return self::get('home_logo_url') ?: plugins_url('assets/img/logo-myaduan.png', MYADUAN_FILE) . '?ver=' . rawurlencode(MYADUAN_VERSION);
+    }
+
+    /** Browser tab icon: the WordPress site icon when set, otherwise the small MyAduan logo. */
+    public static function icon_url(): string
+    {
+        return get_site_icon_url(64) ?: plugins_url('assets/img/logo-myaduan-64.png', MYADUAN_FILE) . '?ver=' . rawurlencode(MYADUAN_VERSION);
+    }
+
     /** URL of a public page whose path is kept in settings (form_path, track_path). */
     public static function page_url(string $key): string
     {
@@ -123,7 +135,7 @@ final class Settings
         echo '</ul></td></tr>';
         $row('form_path', 'Laluan borang aduan', 'Page yang ada [myaduan_borang]. Contoh: aduan → ' . home_url('/aduan/'));
         $row('track_path', 'Laluan semak status', 'Page yang ada [myaduan_semak]. Contoh: semak → ' . home_url('/semak/'));
-        $row('home_logo_url', 'URL logo (halaman utama)', 'Pilihan. Upload logo rasmi di Media → Add New, salin URL fail ke sini. Kosong = logo MyAduan biasa.', 'url');
+        $row('home_logo_url', 'URL logo', 'Pilihan. Dipakai di halaman utama, borang aduan, semak status dan portal admin. Upload logo rasmi di Media → Add New, salin URL fail ke sini. Kosong = logo MyAduan biasa.', 'url');
         $row('home_image_url', 'URL gambar utama (halaman utama)', 'Pilihan. Contoh: gambar Ahli Parlimen atau kawasan Gombak (nisbah 4:3 atau segi empat). Kosong = ilustrasi MyAduan.', 'url');
         $row('home_description', 'Meta description (halaman utama)', 'Ayat ringkas untuk Google dan preview link. Elok bawah 160 aksara.');
         $row('home_share_image_url', 'URL gambar preview (feature image)', 'Pilihan. Gambar bila link myaduan.my dikongsi di WhatsApp/Facebook, saiz 1200×630. Kosong = gambar MyAduan biasa.', 'url');

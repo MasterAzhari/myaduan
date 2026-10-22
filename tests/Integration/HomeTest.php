@@ -70,6 +70,22 @@ final class HomeTest extends TestCase
         $this->assertStringNotContainsString('inisiatif-h', Home::render());
     }
 
+    public function test_same_logo_on_every_page(): void
+    {
+        update_option(Settings::OPTION, []);
+        $this->assertStringContainsString('img/logo-myaduan.png', Settings::logo_url());
+        update_option(Settings::OPTION, ['home_logo_url' => 'https://myaduan.my/rasmi.png']);
+        $this->assertSame('https://myaduan.my/rasmi.png', Settings::logo_url());
+        $this->assertStringContainsString('src="https://myaduan.my/rasmi.png"', Home::render());
+        $this->assertStringContainsString('data-logo="https://myaduan.my/rasmi.png"', MyAduan\Frontend::form());
+        $this->assertStringContainsString('data-logo="https://myaduan.my/rasmi.png"', MyAduan\Frontend::track());
+        $admin = (int) wp_insert_user(['user_login' => 'logo' . wp_rand(), 'user_pass' => wp_generate_password(), 'user_email' => 'logo' . wp_rand() . '@myaduan.my', 'role' => 'administrator']);
+        $page = MyAduan\Portal::response(new WP_User($admin))['body'];
+        $this->assertStringContainsString('rasmi.png', $page);
+        $this->assertStringContainsString('<link rel="icon"', $page);
+        $this->assertStringContainsString('<link rel="icon"', MyAduan\Portal::response(new WP_User(0))['body']);
+    }
+
     public function test_diagnose(): void
     {
         update_option(Settings::OPTION, ['home_enabled' => '1']);

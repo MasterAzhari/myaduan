@@ -12,6 +12,15 @@ final class Frontend
     {
         add_shortcode('myaduan_borang', [self::class, 'form']);
         add_shortcode('myaduan_semak', [self::class, 'track']);
+        add_action('wp_head', [self::class, 'icon']);
+    }
+
+    /** Same tab icon as the home page and portal when the site has no WordPress site icon. */
+    public static function icon(): void
+    {
+        if (!has_site_icon()) {
+            echo '<link rel="icon" href="' . esc_url(Settings::icon_url()) . '">' . "\n";
+        }
     }
 
     public static function form(): string
@@ -32,7 +41,7 @@ final class Frontend
         $url = plugins_url('assets/', MYADUAN_FILE);
         wp_enqueue_script('myaduan-public', $url . 'public.js', [], MYADUAN_VERSION, ['strategy' => 'defer', 'in_footer' => true]);
         $attrs = '';
-        foreach (['api' => rest_url('myaduan/v1'), 'css' => $url . 'public.css?ver=' . MYADUAN_VERSION] + $data as $k => $v) {
+        foreach (['api' => rest_url('myaduan/v1'), 'css' => $url . 'public.css?ver=' . MYADUAN_VERSION, 'logo' => Settings::logo_url(), 'home' => home_url('/')] + $data as $k => $v) {
             $attrs .= ' data-' . $k . '="' . esc_attr($v) . '"';
         }
         return "<$tag$attrs></$tag><noscript><p>Sila aktifkan JavaScript untuk menggunakan borang MyAduan.</p></noscript>";

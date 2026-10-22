@@ -75,6 +75,11 @@
       const root = this.attachShadow({ mode: 'open' });
       root.append(h('link', { rel: 'stylesheet', href: this.dataset.css }));
       this.api = (this.dataset.api || '').replace(/\/$/, '');
+      if (this.dataset.logo) {
+        root.append(h('a', { class: 'brand', href: this.dataset.home || '/' },
+          h('img', { src: this.dataset.logo, alt: 'Logo MyAduan', width: '52', height: '52' }),
+          h('span', {}, 'MyAduan', h('small', {}, 'Sistem Aduan Parlimen Gombak'))));
+      }
       this.card = h('div', { class: 'card' });
       root.append(this.card);
       this.render();

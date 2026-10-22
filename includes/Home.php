@@ -80,13 +80,12 @@ final class Home
         $ver = rawurlencode(MYADUAN_VERSION);
         $form = Settings::page_url('form_path');
         $track = Settings::page_url('track_path');
-        $logo = Settings::get('home_logo_url');
         $image = Settings::get('home_image_url');
         $title = 'MyAduan · Sistem Aduan Parlimen Gombak';
         $desc = Settings::get('home_description');
         $share = Settings::get('home_share_image_url') ?: $assets . 'img/home-share.png?ver=' . $ver;
-        $icon = get_site_icon_url(64) ?: $assets . 'img/logo-myaduan-64.png?ver=' . $ver;
-        $logo = $logo ?: $assets . 'img/logo-myaduan.png?ver=' . $ver;
+        $icon = Settings::icon_url();
+        $logo = Settings::logo_url();
         $mark = '<img class="logo-img" src="' . esc_url($logo) . '" alt="Logo MyAduan Parlimen Gombak" width="52" height="52">';
         $hero = $image
             ? '<img class="hero-photo" src="' . esc_url($image) . '" alt="" loading="eager">'
