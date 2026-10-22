@@ -31,10 +31,12 @@ Status: **Fasa 3**. Ada database, peranan, aliran status, REST API, borang awam,
 
 ### Borang awam
 
+- Gaya langkah demi langkah (ikut borang asal MyAduan): soalan kecemasan → butiran → lokasi (+GPS) → gambar → nama → IC & telefon → semakan dengan butang Ubah. Panel tepi tunjuk peringkat, ada bar kemajuan.
 - 5 medan wajib: nama, No. IC, telefon, butiran, lokasi. Gambar (maks 3) dan GPS pilihan.
+- Borang dan semak status guna bingkai yang sama, dengan suis Buat Aduan / Semak Status Aduan. Bingkai melebar keluar dari kolum tema yang sempit (maks 1120px).
 - Borang berjalan dalam Shadow DOM, jadi CSS tema/Elementor tak rosakkan rupa dia.
 - Gambar besar dikecilkan dalam telefon sebelum upload, kemudian server proses semula: maksimum 2000px, EXIF (termasuk lokasi GPS dalam gambar) dibuang, disimpan dalam folder private.
-- Draf disimpan dalam tab yang sama sahaja (`sessionStorage`), dibuang lepas berjaya hantar.
+- Draf (termasuk langkah semasa) disimpan dalam tab yang sama sahaja (`sessionStorage`), dibuang lepas berjaya hantar.
 - Tekan "Hantar" dua kali atau sambungan putus tak akan jadi aduan berganda.
 
 ### E-mel

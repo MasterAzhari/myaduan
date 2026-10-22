@@ -79,6 +79,8 @@ final class HomeTest extends TestCase
         $this->assertStringContainsString('src="https://myaduan.my/rasmi.png"', Home::render());
         $this->assertStringContainsString('data-logo="https://myaduan.my/rasmi.png"', MyAduan\Frontend::form());
         $this->assertStringContainsString('data-logo="https://myaduan.my/rasmi.png"', MyAduan\Frontend::track());
+        $this->assertStringContainsString('data-track="' . home_url('/semak/') . '"', MyAduan\Frontend::form());
+        $this->assertStringContainsString('max-width:none', MyAduan\Frontend::form());
         $admin = (int) wp_insert_user(['user_login' => 'logo' . wp_rand(), 'user_pass' => wp_generate_password(), 'user_email' => 'logo' . wp_rand() . '@myaduan.my', 'role' => 'administrator']);
         $page = MyAduan\Portal::response(new WP_User($admin))['body'];
         $this->assertStringContainsString('rasmi.png', $page);

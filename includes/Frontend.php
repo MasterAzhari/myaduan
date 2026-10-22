@@ -41,9 +41,11 @@ final class Frontend
         $url = plugins_url('assets/', MYADUAN_FILE);
         wp_enqueue_script('myaduan-public', $url . 'public.js', [], MYADUAN_VERSION, ['strategy' => 'defer', 'in_footer' => true]);
         $attrs = '';
-        foreach (['api' => rest_url('myaduan/v1'), 'css' => $url . 'public.css?ver=' . MYADUAN_VERSION, 'logo' => Settings::logo_url(), 'home' => home_url('/')] + $data as $k => $v) {
+        foreach (['api' => rest_url('myaduan/v1'), 'css' => $url . 'public.css?ver=' . MYADUAN_VERSION, 'logo' => Settings::logo_url(), 'home' => home_url('/'), 'form' => Settings::page_url('form_path'), 'track' => Settings::page_url('track_path')] + $data as $k => $v) {
             $attrs .= ' data-' . $k . '="' . esc_attr($v) . '"';
         }
-        return "<$tag$attrs></$tag><noscript><p>Sila aktifkan JavaScript untuk menggunakan borang MyAduan.</p></noscript>";
+        // Inline so it beats theme rules that cap content width: the form breaks out of narrow columns but never past the screen.
+        $wide = 'display:block;max-width:none;width:min(1120px,calc(100vw - 24px));margin-left:0!important;margin-right:0!important;position:relative;left:50%;transform:translateX(-50%)';
+        return "<$tag$attrs style=\"$wide\"></$tag><noscript><p>Sila aktifkan JavaScript untuk menggunakan borang MyAduan.</p></noscript>";
     }
 }
