@@ -58,7 +58,7 @@ final class Home
         $lines[] = 'Settings → Reading: laman utama ialah ' . $front . '. Bila suis ON, MyAduan menggantikannya.';
         $lines[] = 'Tema: ' . wp_get_theme()->get('Name') . '.';
         if (defined('LSCWP_V')) {
-            $lines[] = 'LiteSpeed Cache dikesan: lepas tukar setting, tekan LiteSpeed Cache → Purge All.';
+            $lines[] = 'LiteSpeed Cache dikesan: cache dibuang sendiri bila setting ini disimpan. Kalau myaduan.my masih lama, LiteSpeed Cache → Toolbox → Purge All.';
         }
         return $lines;
     }

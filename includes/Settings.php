@@ -61,9 +61,17 @@ final class Settings
         add_action('admin_menu', static function (): void {
             add_options_page('MyAduan', 'MyAduan', 'manage_options', 'myaduan', [self::class, 'page']);
         });
+        // The landing page and public pages depend on these settings, so drop LiteSpeed's page cache when they change.
+        add_action('update_option_' . self::OPTION, [self::class, 'purge_cache']);
+        add_action('add_option_' . self::OPTION, [self::class, 'purge_cache']);
         add_action('admin_init', static function (): void {
             register_setting('myaduan', self::OPTION, ['type' => 'array', 'sanitize_callback' => [self::class, 'sanitize'], 'default' => self::DEFAULTS]);
         });
+    }
+
+    public static function purge_cache(): void
+    {
+        do_action('litespeed_purge_all');
     }
 
     public static function sanitize(mixed $in): array
