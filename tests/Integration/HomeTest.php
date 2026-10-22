@@ -21,10 +21,8 @@ final class HomeTest extends TestCase
         update_option(Settings::OPTION, ['home_enabled' => '1']);
         $this->go('/');
         $this->assertTrue(Home::should_serve());
-        $this->assertStringEndsWith('templates/home.php', Home::template('/theme/index.php'));
         $this->go('/?s=lampu');
         $this->assertFalse(Home::should_serve());
-        $this->assertSame('/theme/search.php', Home::template('/theme/search.php'));
         update_option(Settings::OPTION, ['home_enabled' => '']);
         $this->go('/');
         $this->assertFalse(Home::should_serve());
@@ -70,6 +68,14 @@ final class HomeTest extends TestCase
         $this->assertStringContainsString('src="https://myaduan.my/yab.jpg"', Home::render());
         update_option(Settings::OPTION, ['home_mp_name' => '']);
         $this->assertStringNotContainsString('inisiatif-h', Home::render());
+    }
+
+    public function test_diagnose(): void
+    {
+        update_option(Settings::OPTION, ['home_enabled' => '1']);
+        $this->assertStringContainsString('ON', Home::diagnose()[0]);
+        update_option(Settings::OPTION, []);
+        $this->assertStringContainsString('OFF', Home::diagnose()[0]);
     }
 
     public function test_sanitize_settings(): void

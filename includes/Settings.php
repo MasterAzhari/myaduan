@@ -108,6 +108,11 @@ final class Settings
             '<tr><th scope="row">Halaman utama MyAduan</th><td><label><input type="checkbox" name="%1$s[home_enabled]" value="1"%2$s> Paparkan halaman utama MyAduan bila orang buka %3$s</label><p class="description">Menggantikan halaman utama tema. Halaman lain tidak terjejas.</p></td></tr>',
             esc_attr($name), checked(self::get('home_enabled'), '1', false), esc_html(home_url('/'))
         );
+        echo '<tr><th scope="row">Status halaman utama</th><td><ul style="margin:0">';
+        foreach (Home::diagnose() as $line) {
+            echo '<li>' . esc_html($line) . '</li>';
+        }
+        echo '</ul></td></tr>';
         $row('form_path', 'Laluan borang aduan', 'Page yang ada [myaduan_borang]. Contoh: aduan → ' . home_url('/aduan/'));
         $row('track_path', 'Laluan semak status', 'Page yang ada [myaduan_semak]. Contoh: semak → ' . home_url('/semak/'));
         $row('home_logo_url', 'URL logo (halaman utama)', 'Pilihan. Upload logo rasmi di Media → Add New, salin URL fail ke sini. Kosong = logo MyAduan biasa.', 'url');
