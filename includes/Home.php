@@ -32,7 +32,8 @@ final class Home
 
     public static function register(): void
     {
-        add_action('template_redirect', [self::class, 'maybe_serve'], 0);
+        // template_include (not template_redirect + exit) so canonical redirects, maintenance mode and other plugins still run first.
+        add_filter('template_include', [self::class, 'template'], 99);
     }
 
     public static function enabled(): bool
@@ -46,17 +47,9 @@ final class Home
         return self::enabled() && is_front_page() && !is_paged() && !is_search() && !is_feed() && !is_preview() && !is_customize_preview();
     }
 
-    public static function maybe_serve(): void
+    public static function template(string $template): string
     {
-        if (!self::should_serve()) {
-            return;
-        }
-        status_header(200);
-        header('Content-Type: text/html; charset=utf-8');
-        header('X-Content-Type-Options: nosniff');
-        header('Referrer-Policy: strict-origin-when-cross-origin');
-        echo self::render();
-        exit;
+        return self::should_serve() ? MYADUAN_DIR . '/templates/home.php' : $template;
     }
 
     public static function render(): string

@@ -21,8 +21,10 @@ final class HomeTest extends TestCase
         update_option(Settings::OPTION, ['home_enabled' => '1']);
         $this->go('/');
         $this->assertTrue(Home::should_serve());
+        $this->assertStringEndsWith('templates/home.php', Home::template('/theme/index.php'));
         $this->go('/?s=lampu');
         $this->assertFalse(Home::should_serve());
+        $this->assertSame('/theme/search.php', Home::template('/theme/search.php'));
         update_option(Settings::OPTION, ['home_enabled' => '']);
         $this->go('/');
         $this->assertFalse(Home::should_serve());
