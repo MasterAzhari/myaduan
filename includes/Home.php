@@ -63,11 +63,9 @@ final class Home
         $title = 'MyAduan · Sistem Aduan Parlimen Gombak';
         $desc = Settings::get('home_description');
         $share = Settings::get('home_share_image_url') ?: $assets . 'img/home-share.png?ver=' . $ver;
-        $icon = get_site_icon_url(64);
-
-        $mark = $logo
-            ? '<img class="logo-img" src="' . esc_url($logo) . '" alt="Logo">'
-            : self::mark();
+        $icon = get_site_icon_url(64) ?: $assets . 'img/logo-myaduan-64.png?ver=' . $ver;
+        $logo = $logo ?: $assets . 'img/logo-myaduan.png?ver=' . $ver;
+        $mark = '<img class="logo-img" src="' . esc_url($logo) . '" alt="Logo MyAduan Parlimen Gombak" width="52" height="52">';
         $hero = $image
             ? '<img class="hero-photo" src="' . esc_url($image) . '" alt="" loading="eager">'
             : '<img class="hero-art" src="' . esc_url($assets . 'img/home-hero.svg?ver=' . $ver) . '" alt="" width="560" height="480">';
@@ -99,8 +97,7 @@ final class Home
 <meta name="twitter:description" content="<?= esc_attr($desc) ?>">
 <meta name="twitter:image" content="<?= esc_url($share) ?>">
 <meta name="theme-color" content="#b3122b">
-<?php if ($icon) : ?><link rel="icon" href="<?= esc_url($icon) ?>">
-<?php endif; ?>
+<link rel="icon" href="<?= esc_url($icon) ?>">
 <link rel="stylesheet" href="<?= esc_url($assets . 'home.css?ver=' . $ver) ?>">
 </head>
 <body>
@@ -269,13 +266,5 @@ final class Home
     private static function icon(int $order): string
     {
         return '<svg viewBox="0 0 24 24">' . (self::ICONS[$order] ?? self::ICON_OTHER) . '</svg>';
-    }
-
-    /** Default MyAduan mark: a speech bubble with a tick. Replace with the official logo via settings. */
-    private static function mark(): string
-    {
-        return '<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#b3122b"/>'
-            . '<path d="M10 12h20a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-9l-6 5v-5h-5a3 3 0 0 1-3-3V15a3 3 0 0 1 3-3z" fill="#fff"/>'
-            . '<path d="M14.5 20.5l4 4 7-8" fill="none" stroke="#d4a017" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     }
 }

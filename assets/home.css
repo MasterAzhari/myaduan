@@ -46,12 +46,11 @@ a:focus-visible { outline: 3px solid rgba(212, 160, 23, .7); outline-offset: 2px
 
 /* Header */
 .top { position: sticky; top: 0; z-index: 5; background: rgba(255, 255, 255, .94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
-.top-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 66px; }
+.top-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 72px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
 .brand strong { display: block; font-size: 1.15rem; color: var(--red-dark); line-height: 1.1; }
 .brand small { display: block; font-size: .8rem; color: var(--muted); line-height: 1.2; }
-.logo-mark { width: 40px; height: 40px; flex: none; }
-.logo-img { height: 44px; width: auto; flex: none; }
+.logo-img { height: 52px; width: auto; flex: none; }
 .top nav { display: flex; align-items: center; gap: 18px; }
 .nav-link { color: var(--ink); text-decoration: none; font-weight: 600; font-size: .95rem; }
 .nav-link:hover { color: var(--red); }
