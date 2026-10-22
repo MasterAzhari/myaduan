@@ -78,6 +78,16 @@ final class HomeTest extends TestCase
         $this->assertStringContainsString('OFF', Home::diagnose()[0]);
     }
 
+    public function test_saving_settings_purges_litespeed(): void
+    {
+        $purged = 0;
+        $count = static function () use (&$purged): void { $purged++; };
+        add_action('litespeed_purge_all', $count);
+        update_option(Settings::OPTION, ['home_enabled' => '1']);
+        remove_action('litespeed_purge_all', $count);
+        $this->assertGreaterThan(0, $purged);
+    }
+
     public function test_sanitize_settings(): void
     {
         $clean = Settings::sanitize(['home_enabled' => 'yes', 'form_path' => '/Borang Aduan/', 'home_image_url' => 'javascript:alert(1)']);
