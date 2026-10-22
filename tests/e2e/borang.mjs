@@ -34,41 +34,64 @@ page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
 await page.goto(BASE + '/aduan/');
+await page.evaluate(() => sessionStorage.clear());
+await page.reload();
 const form = page.locator('myaduan-borang');
-await form.locator('form').waitFor();
-assert(await form.locator('.emergency').isVisible(), 'mesej kecemasan dipapar');
-await page.screenshot({ path: `${SHOTS}/1-borang-kosong.png`, fullPage: true });
+const next = () => form.locator('button.primary').click();
+await form.locator('h1').waitFor();
+assert((await form.locator('h1').textContent()).includes('Ada masalah'), 'halaman selamat datang dipapar');
+await page.screenshot({ path: `${SHOTS}/1-selamat-datang.png`, fullPage: true });
 
-await form.getByRole('button', { name: 'Hantar aduan' }).click();
-assert(await form.locator('#err-name').textContent() !== '', 'ralat dipapar bila borang kosong');
-await page.screenshot({ path: `${SHOTS}/2-borang-ralat.png`, fullPage: true });
+await next();
+await next();
+assert(await form.locator('.err').first().textContent() !== '', 'mesti pilih jawapan kecemasan');
+await form.getByText('Ya, kecemasan sedang berlaku').click();
+assert(await form.locator('.emergency').isVisible(), 'mesej kecemasan dan 999 dipapar');
+await next();
+assert(await form.locator('#err-ack').textContent() !== '', 'mesti sahkan tindakan kecemasan');
+await form.locator('#f-ack').check();
+await page.screenshot({ path: `${SHOTS}/2-kecemasan.png`, fullPage: true });
+await next();
 
+await next();
+assert(await form.locator('#err-details').textContent() !== '', 'ralat bila butiran kosong');
+await form.locator('#f-details').fill('Lampu jalan di depan sekolah rosak sejak minggu lepas. Gelap dan bahaya waktu malam.');
+await next();
+await form.locator('#f-location').fill('Jalan Sungai Tua, depan SK Sungai Tua');
+await next();
+await form.locator('input[type=file]').first().setInputFiles({ name: 'lampu.png', mimeType: 'image/png', buffer: png(1200, 900) });
+await form.locator('.thumb img').waitFor();
+await page.screenshot({ path: `${SHOTS}/3-gambar.png`, fullPage: true });
+await next();
 await form.locator('#f-name').fill('Siti binti Ahmad');
+await next();
 await form.locator('#f-ic').pressSequentially('880512105432');
 assert(await form.locator('#f-ic').inputValue() === '880512-10-5432', 'IC diformat automatik');
 await form.locator('#f-phone').fill('012-987 6543');
-await form.locator('#f-details').fill('Lampu jalan di depan sekolah rosak sejak minggu lepas. Gelap dan bahaya waktu malam.');
-await form.locator('#f-location').fill('Jalan Sungai Tua, depan SK Sungai Tua');
-await form.locator('input[type=file]').setInputFiles({ name: 'lampu.png', mimeType: 'image/png', buffer: png(1200, 900) });
-await form.locator('.thumb img').waitFor();
-await form.locator('#f-consent').check();
-await page.screenshot({ path: `${SHOTS}/3-borang-diisi.png`, fullPage: true });
+await next();
+assert((await form.locator('.review').textContent()).includes('1 gambar dipilih'), 'semakan tunjuk semua jawapan');
 
-// Reload keeps the draft for this tab (photos are not kept).
+// Reload keeps the draft and the step for this tab (photos are not kept).
 await page.reload();
-await page.locator('myaduan-borang form').waitFor();
-assert(await form.locator('#f-details').inputValue() !== '', 'draf kekal selepas muat semula');
+await form.locator('.review').waitFor();
+assert((await form.locator('.review').textContent()).includes('Jalan Sungai Tua'), 'draf kekal selepas muat semula');
+await form.getByRole('button', { name: 'Ubah Gambar' }).click();
+// Go on straight after picking a large photo: the form must wait for resizing, not drop the photo.
+await form.locator('input[type=file]').first().setInputFiles({ name: 'lampu.png', mimeType: 'image/png', buffer: png(4000, 3000) });
+await next();
+assert((await form.locator('.review').textContent()).includes('1 gambar dipilih'), 'kembali ke semakan selepas ubah');
+await next();
+assert(await form.locator('#err-consent').textContent() !== '', 'mesti tanda pengesahan');
 await form.locator('#f-consent').check();
-// Submit straight after picking a large photo: the form must wait for resizing, not drop the photo.
-await form.locator('input[type=file]').setInputFiles({ name: 'lampu.png', mimeType: 'image/png', buffer: png(4000, 3000) });
+await page.screenshot({ path: `${SHOTS}/4-semakan.png`, fullPage: true });
 const submitted = page.waitForResponse((r) => r.url().includes('/myaduan/v1/complaints'));
-await form.getByRole('button', { name: 'Hantar aduan' }).click();
-assert((await (await submitted).json()).images === 1, 'gambar yang masih diproses tetap dihantar');
-const refEl = form.locator('.ref');
+await next();
+assert((await (await submitted).json()).images === 1, 'gambar dihantar bersama aduan');
+const refEl = form.locator('[data-ref]');
 await refEl.waitFor({ timeout: 15000 });
 const ref = (await refEl.textContent()).trim();
 assert(/^GOM-\d{8}-[A-F0-9]{10}$/.test(ref), 'nombor rujukan dipapar: ' + ref);
-await page.screenshot({ path: `${SHOTS}/4-berjaya.png`, fullPage: true });
+await page.screenshot({ path: `${SHOTS}/5-berjaya.png`, fullPage: true });
 
 await page.goto(BASE + '/semak/');
 const semak = page.locator('myaduan-semak');
@@ -77,9 +100,9 @@ await semak.getByRole('button', { name: 'Semak status' }).click();
 await semak.locator('.result').first().waitFor();
 assert((await semak.locator('.result code').first().textContent()) === ref, 'semak dengan IC jumpa aduan');
 assert(!(await semak.locator('.results').textContent()).includes('Siti'), 'nama pengadu tidak didedahkan');
-await page.screenshot({ path: `${SHOTS}/5-semak.png`, fullPage: true });
+await page.screenshot({ path: `${SHOTS}/6-semak.png`, fullPage: true });
 
-const fontFamily = await form.evaluate((el) => getComputedStyle(el.shadowRoot.querySelector('.card')).fontFamily).catch(() => '');
+const fontFamily = await form.evaluate((el) => getComputedStyle(el.shadowRoot.querySelector('.app')).fontFamily).catch(() => '');
 assert(errors.length === 0, 'tiada ralat JavaScript' + (errors.length ? ': ' + errors.join(' | ') : ''));
 writeFileSync(`${SHOTS}/reference.txt`, ref);
 await browser.close();
