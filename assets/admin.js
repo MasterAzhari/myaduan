@@ -152,7 +152,7 @@
     view = h('main', { id: 'view', tabindex: '-1' });
     app.replaceChildren(
       h('header', { class: 'top' },
-        h('a', { class: 'brand', href: '#/' }, h('span', { class: 'logo', 'aria-hidden': 'true' }, 'MA'), h('span', {}, 'MyAduan', h('small', {}, 'Portal Admin'))),
+        h('a', { class: 'brand', href: '#/' }, cfg.logo ? h('img', { class: 'logo-img', src: cfg.logo, alt: '', width: '38', height: '38' }) : h('span', { class: 'logo', 'aria-hidden': 'true' }, 'MA'), h('span', {}, 'MyAduan', h('small', {}, 'Portal Admin'))),
         h('nav', { class: 'nav', 'aria-label': 'Menu utama' }, links.map(([href, label, key]) => h('a', { href, 'data-key': key }, label))),
         h('div', { class: 'who' },
           h('span', { class: 'who-name' }, me.name, h('small', {}, ROLE[me.role])),
