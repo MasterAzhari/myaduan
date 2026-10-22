@@ -17,6 +17,15 @@ Status: **Fasa 3**. Ada database, peranan, aliran status, REST API, borang awam,
    - `/aduan/` → `[myaduan_borang]`
    - `/semak/` → `[myaduan_semak]`
 5. **Settings → MyAduan**: isi e-mel notifikasi aduan baru dan URL notis privasi.
+6. Halaman utama: tandakan **Halaman utama MyAduan** dalam Settings → MyAduan supaya `myaduan.my` terus papar halaman MyAduan.
+
+### Halaman utama (`/`)
+
+- Halaman sendiri di luar tema: apa itu MyAduan, cara buat aduan, jenis aduan (ikut kategori dalam database), perjalanan status, maklumat yang perlu disediakan, kawasan DUN, mesej kecemasan dan butang **Buat Aduan Sekarang**.
+- Hanya laman utama yang diganti. Carian, feed dan page lain kekal ikut WordPress/tema. Buang tanda untuk kembali ke halaman utama tema.
+- Pautan butang ikut **Laluan borang aduan** (`aduan`) dan **Laluan semak status** (`semak`).
+- Logo dan gambar utama boleh ditukar: upload di Media, salin URL ke **URL logo** / **URL gambar utama**. Kosong = logo dan ilustrasi MyAduan sendiri (SVG, dilukis untuk projek ini, bebas guna).
+- Tiada JavaScript dan tiada data peribadi, jadi LiteSpeed Cache boleh cache.
 
 ### Borang awam
 

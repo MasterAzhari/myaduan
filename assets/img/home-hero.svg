@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 480" role="img" aria-label="Ilustrasi penduduk menghantar aduan melalui telefon">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6e0"/><stop offset="1" stop-color="#fde7ea"/></linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b5b63"/><stop offset="1" stop-color="#3f3f46"/></linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#8c0e21" flood-opacity=".22"/></filter>
+    <filter id="sh2" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#000" flood-opacity=".14"/></filter>
+  </defs>
+
+  <!-- backdrop -->
+  <rect x="20" y="30" width="520" height="400" rx="40" fill="url(#sky)"/>
+  <circle cx="440" cy="96" r="38" fill="#f6d77a" opacity=".85"/>
+  <path d="M70 120c18-10 40-10 54 2 10-14 38-16 50 2 16-2 26 8 26 18H66c-6-10-4-18 4-22z" fill="#fff" opacity=".9"/>
+
+  <!-- skyline: shophouses, flats, mosque dome, trees -->
+  <g>
+    <rect x="44" y="206" width="70" height="120" fill="#e9c9cf"/>
+    <g fill="#fff" opacity=".85"><rect x="54" y="218" width="14" height="14"/><rect x="78" y="218" width="14" height="14"/><rect x="54" y="244" width="14" height="14"/><rect x="78" y="244" width="14" height="14"/><rect x="54" y="270" width="14" height="14"/><rect x="78" y="270" width="14" height="14"/></g>
+    <rect x="114" y="168" width="78" height="158" fill="#d9a8b0"/>
+    <g fill="#fff" opacity=".8"><rect x="124" y="180" width="12" height="16"/><rect x="146" y="180" width="12" height="16"/><rect x="168" y="180" width="12" height="16"/><rect x="124" y="206" width="12" height="16"/><rect x="146" y="206" width="12" height="16"/><rect x="168" y="206" width="12" height="16"/><rect x="124" y="232" width="12" height="16"/><rect x="146" y="232" width="12" height="16"/><rect x="168" y="232" width="12" height="16"/><rect x="124" y="258" width="12" height="16"/><rect x="146" y="258" width="12" height="16"/><rect x="168" y="258" width="12" height="16"/></g>
+    <rect x="380" y="232" width="62" height="94" fill="#e9c9cf"/>
+    <path d="M380 232l31-22 31 22z" fill="#b3122b" opacity=".75"/>
+    <rect x="401" y="290" width="20" height="36" fill="#fff" opacity=".85"/>
+    <rect x="442" y="214" width="76" height="112" fill="#f0d6a6"/>
+    <path d="M462 214a18 18 0 0 1 36 0z" fill="#d4a017"/>
+    <rect x="478" y="182" width="4" height="16" fill="#d4a017"/>
+    <g fill="#fff" opacity=".85"><rect x="454" y="236" width="14" height="22" rx="7"/><rect x="474" y="236" width="14" height="22" rx="7"/><rect x="494" y="236" width="14" height="22" rx="7"/></g>
+    <rect x="470" y="288" width="20" height="38" rx="10" fill="#fff" opacity=".85"/>
+    <circle cx="368" cy="300" r="22" fill="#7bb38f"/><rect x="365" y="306" width="6" height="22" fill="#6b4f3a"/>
+    <circle cx="36" cy="304" r="18" fill="#7bb38f"/>
+  </g>
+
+  <!-- street lamp (needs repair) -->
+  <g>
+    <rect x="330" y="196" width="6" height="130" fill="#6e6e78"/>
+    <path d="M333 200c0-12 10-20 24-20h6" fill="none" stroke="#6e6e78" stroke-width="6" stroke-linecap="round"/>
+    <rect x="356" y="176" width="22" height="10" rx="4" fill="#4a4a52"/>
+    <path d="M359 186h16l-3 6h-10z" fill="#c9c9cf"/>
+    <path d="M384 172l8-6M386 184h10M384 196l8 6" stroke="#d4a017" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <!-- road with pothole and cone -->
+  <path d="M20 326h520v64a40 40 0 0 1-40 40H60a40 40 0 0 1-40-40z" fill="url(#road)"/>
+  <g fill="#f4f4f5"><rect x="60" y="368" width="44" height="6" rx="3"/><rect x="150" y="368" width="44" height="6" rx="3"/><rect x="420" y="368" width="44" height="6" rx="3"/></g>
+  <ellipse cx="456" cy="402" rx="34" ry="9" fill="#26262b"/>
+  <g transform="translate(486 352)">
+    <path d="M10 0h8l12 44H-2z" fill="#f08a24"/>
+    <path d="M6 14h16l3 10H3z" fill="#fff"/>
+    <rect x="-8" y="42" width="44" height="7" rx="3" fill="#d26b10"/>
+  </g>
+
+  <!-- location pin -->
+  <g filter="url(#sh2)">
+    <path d="M86 248c0-22 16-38 36-38s36 16 36 38c0 28-36 62-36 62s-36-34-36-62z" fill="#b3122b"/>
+    <circle cx="122" cy="248" r="14" fill="#fff"/>
+  </g>
+
+  <!-- phone -->
+  <g filter="url(#sh)">
+    <rect x="196" y="70" width="168" height="330" rx="28" fill="#1d1d1f"/>
+    <rect x="206" y="82" width="148" height="306" rx="20" fill="#fff"/>
+    <rect x="256" y="88" width="48" height="8" rx="4" fill="#1d1d1f"/>
+    <!-- app header -->
+    <rect x="206" y="104" width="148" height="38" fill="#b3122b"/>
+    <rect x="218" y="114" width="18" height="18" rx="5" fill="#fff"/>
+    <path d="M222 124l3 3 6-7" fill="none" stroke="#b3122b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="244" y="116" width="54" height="7" rx="3.5" fill="#fff"/>
+    <rect x="244" y="127" width="36" height="5" rx="2.5" fill="#f3b8c1"/>
+    <!-- form fields -->
+    <rect x="218" y="154" width="40" height="5" rx="2.5" fill="#9a9aa2"/>
+    <rect x="218" y="164" width="124" height="18" rx="6" fill="#f6f6f8" stroke="#d9d9de"/>
+    <rect x="218" y="192" width="52" height="5" rx="2.5" fill="#9a9aa2"/>
+    <rect x="218" y="202" width="124" height="40" rx="6" fill="#f6f6f8" stroke="#d9d9de"/>
+    <rect x="226" y="211" width="92" height="4" rx="2" fill="#c9c9cf"/>
+    <rect x="226" y="220" width="70" height="4" rx="2" fill="#c9c9cf"/>
+    <rect x="226" y="229" width="84" height="4" rx="2" fill="#c9c9cf"/>
+    <!-- photo thumbnails -->
+    <rect x="218" y="252" width="36" height="30" rx="6" fill="#ead7a0"/>
+    <path d="M222 278l9-11 7 7 5-5 8 9z" fill="#9b7a1c"/>
+    <rect x="260" y="252" width="36" height="30" rx="6" fill="#efc9cf"/>
+    <path d="M264 278l9-11 7 7 5-5 8 9z" fill="#b3122b" opacity=".6"/>
+    <rect x="302" y="252" width="36" height="30" rx="6" fill="none" stroke="#d9d9de" stroke-dasharray="4 3"/>
+    <path d="M320 261v12M314 267h12" stroke="#9a9aa2" stroke-width="2" stroke-linecap="round"/>
+    <!-- location chip -->
+    <rect x="218" y="292" width="124" height="18" rx="9" fill="#fbf3dc"/>
+    <circle cx="229" cy="301" r="4" fill="#d4a017"/>
+    <rect x="238" y="298" width="70" height="5" rx="2.5" fill="#b08410"/>
+    <!-- submit -->
+    <rect x="218" y="322" width="124" height="28" rx="9" fill="#b3122b"/>
+    <rect x="248" y="333" width="64" height="6" rx="3" fill="#fff"/>
+    <rect x="252" y="364" width="56" height="5" rx="2.5" fill="#d9d9de"/>
+  </g>
+
+  <!-- reference / status card -->
+  <g filter="url(#sh2)">
+    <rect x="352" y="112" width="170" height="92" rx="16" fill="#fff"/>
+    <circle cx="376" cy="138" r="13" fill="#1e7b45"/>
+    <path d="M370 138l4.5 4.5 8-9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="396" y="134" font-family="system-ui, Segoe UI, Roboto, sans-serif" font-size="11" fill="#5f6368">Aduan diterima</text>
+    <text x="396" y="148" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="700" fill="#1d1d1f">GOM-20261022</text>
+    <rect x="366" y="164" width="142" height="26" rx="13" fill="#fbf3dc"/>
+    <circle cx="380" cy="177" r="5" fill="#d4a017"/>
+    <text x="392" y="181" font-family="system-ui, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="700" fill="#7a5a00">Dalam tindakan</text>
+  </g>
+
+  <!-- speech bubble -->
+  <g filter="url(#sh2)">
+    <path d="M40 132h108a14 14 0 0 1 14 14v34a14 14 0 0 1-14 14h-62l-18 16v-16H40a14 14 0 0 1-14-14v-34a14 14 0 0 1 14-14z" fill="#fff"/>
+    <text x="42" y="158" font-family="system-ui, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="700" fill="#8c0e21">Lampu jalan rosak</text>
+    <text x="42" y="176" font-family="system-ui, Segoe UI, Roboto, sans-serif" font-size="11" fill="#5f6368">Jalan Sungai Tua</text>
+  </g>
+</svg>
