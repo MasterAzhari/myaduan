@@ -14,6 +14,11 @@ final class Settings
         'privacy_url' => '',
         'portal_path' => 'adminaduan',
         'emergency_text' => 'Untuk kecemasan yang mengancam nyawa, hubungi 999 (polis/ambulans) atau 994 (bomba) dahulu.',
+        'home_enabled' => '',
+        'form_path' => 'aduan',
+        'track_path' => 'semak',
+        'home_logo_url' => '',
+        'home_image_url' => '',
     ];
 
     public static function get(string $key): string
@@ -40,6 +45,12 @@ final class Settings
         return home_url('/' . trim(self::get('portal_path'), '/') . '/') . ($fragment ? '#' . $fragment : '');
     }
 
+    /** URL of a public page whose path is kept in settings (form_path, track_path). */
+    public static function page_url(string $key): string
+    {
+        return home_url('/' . trim(self::get($key), '/') . '/');
+    }
+
     public static function register(): void
     {
         add_action('admin_menu', static function (): void {
@@ -59,6 +70,11 @@ final class Settings
             'privacy_url' => esc_url_raw((string) ($in['privacy_url'] ?? '')),
             'portal_path' => sanitize_title((string) ($in['portal_path'] ?? self::DEFAULTS['portal_path'])) ?: self::DEFAULTS['portal_path'],
             'emergency_text' => sanitize_text_field((string) ($in['emergency_text'] ?? self::DEFAULTS['emergency_text'])),
+            'home_enabled' => empty($in['home_enabled']) ? '' : '1',
+            'form_path' => sanitize_title((string) ($in['form_path'] ?? self::DEFAULTS['form_path'])) ?: self::DEFAULTS['form_path'],
+            'track_path' => sanitize_title((string) ($in['track_path'] ?? self::DEFAULTS['track_path'])) ?: self::DEFAULTS['track_path'],
+            'home_logo_url' => esc_url_raw((string) ($in['home_logo_url'] ?? '')),
+            'home_image_url' => esc_url_raw((string) ($in['home_image_url'] ?? '')),
         ];
     }
 
@@ -77,7 +93,15 @@ final class Settings
         $row('notify_emails', 'E-mel notifikasi aduan baru', 'Pisahkan dengan koma. Kosong = semua Super Admin MyAduan.');
         $row('privacy_url', 'URL notis privasi', 'Dipaparkan pada borang aduan.', 'url');
         $row('portal_path', 'Laluan portal admin', 'Contoh: adminaduan → ' . home_url('/adminaduan/'));
-        $row('emergency_text', 'Mesej kecemasan', 'Dipaparkan di atas borang.');
+        $row('emergency_text', 'Mesej kecemasan', 'Dipaparkan di atas borang dan di halaman utama.');
+        printf(
+            '<tr><th scope="row">Halaman utama MyAduan</th><td><label><input type="checkbox" name="%1$s[home_enabled]" value="1"%2$s> Paparkan halaman utama MyAduan bila orang buka %3$s</label><p class="description">Menggantikan halaman utama tema. Halaman lain tidak terjejas.</p></td></tr>',
+            esc_attr($name), checked(self::get('home_enabled'), '1', false), esc_html(home_url('/'))
+        );
+        $row('form_path', 'Laluan borang aduan', 'Page yang ada [myaduan_borang]. Contoh: aduan → ' . home_url('/aduan/'));
+        $row('track_path', 'Laluan semak status', 'Page yang ada [myaduan_semak]. Contoh: semak → ' . home_url('/semak/'));
+        $row('home_logo_url', 'URL logo (halaman utama)', 'Pilihan. Upload logo rasmi di Media → Add New, salin URL fail ke sini. Kosong = logo MyAduan biasa.', 'url');
+        $row('home_image_url', 'URL gambar utama (halaman utama)', 'Pilihan. Contoh: gambar Ahli Parlimen atau kawasan Gombak (nisbah 4:3 atau segi empat). Kosong = ilustrasi MyAduan.', 'url');
         echo '</table>';
         submit_button();
         echo '</form><h2>Shortcode</h2><p><code>[myaduan_borang]</code> borang aduan · <code>[myaduan_semak]</code> semak status</p>';
