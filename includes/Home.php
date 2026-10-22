@@ -32,8 +32,35 @@ final class Home
 
     public static function register(): void
     {
-        // template_include (not template_redirect + exit) so canonical redirects, maintenance mode and other plugins still run first.
-        add_filter('template_include', [self::class, 'template'], 99);
+        // Last on template_redirect, so canonical redirects, maintenance mode and other plugins still run first,
+        // and no theme or page builder template_include filter can take the front page back.
+        add_action('template_redirect', [self::class, 'maybe_serve'], PHP_INT_MAX);
+    }
+
+    public static function maybe_serve(): void
+    {
+        if (!self::should_serve()) {
+            return;
+        }
+        status_header(200);
+        header('Content-Type: text/html; charset=utf-8');
+        echo self::render();
+        exit;
+    }
+
+    /** @return list<string> Plain-language status lines for Settings → MyAduan. */
+    public static function diagnose(): array
+    {
+        $lines = [self::enabled() ? 'Suis halaman utama: ON (tersimpan).' : 'Suis halaman utama: OFF. Tanda kotak di atas dan tekan Save Changes.'];
+        $front = get_option('show_on_front') === 'page' && get_option('page_on_front')
+            ? 'page "' . get_the_title((int) get_option('page_on_front')) . '"'
+            : 'senarai post terkini';
+        $lines[] = 'Settings → Reading: laman utama ialah ' . $front . '. Bila suis ON, MyAduan menggantikannya.';
+        $lines[] = 'Tema: ' . wp_get_theme()->get('Name') . '.';
+        if (defined('LSCWP_V')) {
+            $lines[] = 'LiteSpeed Cache dikesan: lepas tukar setting, tekan LiteSpeed Cache → Purge All.';
+        }
+        return $lines;
     }
 
     public static function enabled(): bool
@@ -45,11 +72,6 @@ final class Home
     public static function should_serve(): bool
     {
         return self::enabled() && is_front_page() && !is_paged() && !is_search() && !is_feed() && !is_preview() && !is_customize_preview();
-    }
-
-    public static function template(string $template): string
-    {
-        return self::should_serve() ? MYADUAN_DIR . '/templates/home.php' : $template;
     }
 
     public static function render(): string
