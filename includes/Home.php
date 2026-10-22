@@ -61,7 +61,8 @@ final class Home
         $logo = Settings::get('home_logo_url');
         $image = Settings::get('home_image_url');
         $title = 'MyAduan · Sistem Aduan Parlimen Gombak';
-        $desc = 'Laporkan masalah setempat di Parlimen Gombak dalam talian. Dapat nombor rujukan serta-merta dan semak status aduan anda sehingga selesai.';
+        $desc = Settings::get('home_description');
+        $share = Settings::get('home_share_image_url') ?: $assets . 'img/home-share.png?ver=' . $ver;
         $icon = get_site_icon_url(64);
 
         $mark = $logo
@@ -86,8 +87,17 @@ final class Home
 <meta property="og:title" content="<?= esc_attr($title) ?>">
 <meta property="og:description" content="<?= esc_attr($desc) ?>">
 <meta property="og:url" content="<?= esc_url(home_url('/')) ?>">
-<?php if ($image) : ?><meta property="og:image" content="<?= esc_url($image) ?>">
+<meta property="og:site_name" content="MyAduan">
+<meta property="og:locale" content="ms_MY">
+<meta property="og:image" content="<?= esc_url($share) ?>">
+<?php if (!Settings::get('home_share_image_url')) : ?><meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <?php endif; ?>
+<meta property="og:image:alt" content="MyAduan: sistem aduan Parlimen Gombak">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<?= esc_attr($title) ?>">
+<meta name="twitter:description" content="<?= esc_attr($desc) ?>">
+<meta name="twitter:image" content="<?= esc_url($share) ?>">
 <meta name="theme-color" content="#b3122b">
 <?php if ($icon) : ?><link rel="icon" href="<?= esc_url($icon) ?>">
 <?php endif; ?>

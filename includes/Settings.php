@@ -19,6 +19,8 @@ final class Settings
         'track_path' => 'semak',
         'home_logo_url' => '',
         'home_image_url' => '',
+        'home_description' => 'Laporkan masalah setempat di Parlimen Gombak dalam talian. Dapat nombor rujukan serta-merta dan semak status aduan anda sehingga selesai.',
+        'home_share_image_url' => '',
     ];
 
     public static function get(string $key): string
@@ -75,6 +77,8 @@ final class Settings
             'track_path' => sanitize_title((string) ($in['track_path'] ?? self::DEFAULTS['track_path'])) ?: self::DEFAULTS['track_path'],
             'home_logo_url' => esc_url_raw((string) ($in['home_logo_url'] ?? '')),
             'home_image_url' => esc_url_raw((string) ($in['home_image_url'] ?? '')),
+            'home_description' => sanitize_text_field((string) ($in['home_description'] ?? '')) ?: self::DEFAULTS['home_description'],
+            'home_share_image_url' => esc_url_raw((string) ($in['home_share_image_url'] ?? '')),
         ];
     }
 
@@ -102,6 +106,8 @@ final class Settings
         $row('track_path', 'Laluan semak status', 'Page yang ada [myaduan_semak]. Contoh: semak → ' . home_url('/semak/'));
         $row('home_logo_url', 'URL logo (halaman utama)', 'Pilihan. Upload logo rasmi di Media → Add New, salin URL fail ke sini. Kosong = logo MyAduan biasa.', 'url');
         $row('home_image_url', 'URL gambar utama (halaman utama)', 'Pilihan. Contoh: gambar Ahli Parlimen atau kawasan Gombak (nisbah 4:3 atau segi empat). Kosong = ilustrasi MyAduan.', 'url');
+        $row('home_description', 'Meta description (halaman utama)', 'Ayat ringkas untuk Google dan preview link. Elok bawah 160 aksara.');
+        $row('home_share_image_url', 'URL gambar preview (feature image)', 'Pilihan. Gambar bila link myaduan.my dikongsi di WhatsApp/Facebook, saiz 1200×630. Kosong = gambar MyAduan biasa.', 'url');
         echo '</table>';
         submit_button();
         echo '</form><h2>Shortcode</h2><p><code>[myaduan_borang]</code> borang aduan · <code>[myaduan_semak]</code> semak status</p>';

@@ -46,6 +46,18 @@ final class HomeTest extends TestCase
         $this->assertStringContainsString('Hubungi 999 &lt;b&gt;sekarang&lt;/b&gt;', $html);
         $this->assertStringContainsString('Sungai Tua', $html);
         $this->assertStringContainsString('Infrastruktur &amp; Kemudahan', $html);
+        $this->assertStringContainsString('<meta name="description" content="Laporkan masalah setempat', $html);
+        $this->assertStringContainsString('img/home-share.png', $html);
+        $this->assertStringContainsString('summary_large_image', $html);
+    }
+
+    public function test_custom_description_and_share_image(): void
+    {
+        update_option(Settings::OPTION, ['home_description' => 'Aduan Gombak "cepat"', 'home_share_image_url' => 'https://myaduan.my/share.jpg']);
+        $html = Home::render();
+        $this->assertStringContainsString('content="Aduan Gombak &quot;cepat&quot;"', $html);
+        $this->assertStringContainsString('<meta property="og:image" content="https://myaduan.my/share.jpg">', $html);
+        $this->assertStringNotContainsString('og:image:width', $html);
     }
 
     public function test_sanitize_settings(): void
