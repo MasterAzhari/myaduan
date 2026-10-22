@@ -60,6 +60,18 @@ final class HomeTest extends TestCase
         $this->assertStringNotContainsString('og:image:width', $html);
     }
 
+    public function test_initiative_section(): void
+    {
+        update_option(Settings::OPTION, []);
+        $html = Home::render();
+        $this->assertStringContainsString('Amirudin Shari', $html);
+        $this->assertStringContainsString('mp-seal', $html);
+        update_option(Settings::OPTION, ['home_mp_photo_url' => 'https://myaduan.my/yab.jpg']);
+        $this->assertStringContainsString('src="https://myaduan.my/yab.jpg"', Home::render());
+        update_option(Settings::OPTION, ['home_mp_name' => '']);
+        $this->assertStringNotContainsString('inisiatif-h', Home::render());
+    }
+
     public function test_sanitize_settings(): void
     {
         $clean = Settings::sanitize(['home_enabled' => 'yes', 'form_path' => '/Borang Aduan/', 'home_image_url' => 'javascript:alert(1)']);

@@ -134,6 +134,26 @@ final class Home
     </div>
   </section>
 
+<?php if (Settings::get('home_mp_name') !== '') : ?>
+  <section class="band initiative" aria-labelledby="inisiatif-h">
+    <div class="wrap initiative-in">
+      <figure class="mp">
+<?php if (Settings::get('home_mp_photo_url')) : ?>
+        <img src="<?= esc_url(Settings::get('home_mp_photo_url')) ?>" alt="<?= esc_attr(Settings::get('home_mp_name')) ?>" loading="lazy">
+<?php else : ?>
+        <img class="mp-seal" src="<?= esc_url($logo) ?>" alt="" loading="lazy">
+<?php endif; ?>
+        <figcaption class="mp-name"><strong><?= esc_html(Settings::get('home_mp_name')) ?></strong><?php if (Settings::get('home_mp_title') !== '') : ?><span><?= esc_html(Settings::get('home_mp_title')) ?></span><?php endif; ?></figcaption>
+      </figure>
+      <div>
+        <p class="eyebrow">Inisiatif <?= esc_html(Settings::get('home_mp_name')) ?></p>
+        <h2 id="inisiatif-h">Suara rakyat Gombak, didengar dan diambil tindakan.</h2>
+        <p class="initiative-text">MyAduan diwujudkan supaya setiap penduduk Parlimen Gombak boleh menyampaikan masalah setempat dengan mudah, dan memantau tindakan yang diambil secara telus dari awal hingga selesai.</p>
+      </div>
+    </div>
+  </section>
+
+<?php endif; ?>
   <section class="band" id="cara" aria-labelledby="cara-h">
     <div class="wrap">
       <h2 id="cara-h">Cara buat aduan</h2>
