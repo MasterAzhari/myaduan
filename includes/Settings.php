@@ -180,6 +180,24 @@ final class Settings
         echo '</table>';
         submit_button();
         echo '</form><h2>Shortcode</h2><p><code>[myaduan_borang]</code> borang aduan · <code>[myaduan_semak]</code> semak status</p>';
-        printf('<p>Folder simpanan: <code>%s</code></p></div>', esc_html(Storage::root()));
+        printf('<p>Folder simpanan: <code>%s</code></p>', esc_html(Storage::root()));
+
+        echo '<h2 id="import">Import aduan dari Google Sheet lama</h2>';
+        $report = get_transient('myaduan_import_report_' . get_current_user_id());
+        if (is_array($report)) {
+            delete_transient('myaduan_import_report_' . get_current_user_id());
+            printf('<div class="notice notice-%s inline"><p>%s</p>', $report['errors'] ? 'warning' : 'success', esc_html(Import::summary($report)));
+            foreach (array_slice($report['errors'], 0, 20) as $err) {
+                echo '<br>' . esc_html($err);
+            }
+            echo '</p></div>';
+        }
+        echo '<p>Dalam Google Sheet, buka tab <strong>ADUAN</strong> → File → Download → <strong>Comma-separated values (.csv)</strong>, kemudian upload di sini. Aduan yang sudah ada (nombor rujukan sama) dilangkau, jadi selamat diimport semula. Gambar dimuat turun dari Google Drive jika folder gambar dikongsi "Anyone with the link".</p>';
+        printf('<form method="post" action="%s" enctype="multipart/form-data">', esc_url(admin_url('admin-post.php')));
+        echo '<input type="hidden" name="action" value="myaduan_import">';
+        wp_nonce_field('myaduan_import');
+        echo '<input type="file" name="sheet_csv" accept=".csv,text/csv" required> ';
+        submit_button('Import', 'secondary', 'submit', false);
+        echo '</form></div>';
     }
 }

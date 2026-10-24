@@ -19,7 +19,7 @@
     viewer: 'Lihat angka ringkasan dan dashboard sahaja. Tidak nampak butiran pengadu.',
   };
   const EVENT = {
-    CIPTA: 'Aduan diterima', CLASSIFY: 'Dikelaskan', ASSIGN: 'Ditugaskan', ACCEPT: 'Tugasan diterima', ACTION: 'Tindakan direkod',
+    CIPTA: 'Aduan diterima', IMPORT: 'Diimport dari Google Sheet lama', CLASSIFY: 'Dikelaskan', ASSIGN: 'Ditugaskan', ACCEPT: 'Tugasan diterima', ACTION: 'Tindakan direkod',
     COMMENT: 'Catatan dalaman', REQUEST_CLOSE: 'Mohon penutupan', APPROVE_CLOSE: 'Disahkan & ditutup', RETURN: 'Dikembalikan untuk tindakan',
     REOPEN: 'Dibuka semula', PUBLISH: 'Mesej awam dikemas kini',
   };
