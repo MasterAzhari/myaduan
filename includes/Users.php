@@ -79,7 +79,10 @@ final class Users
         $current = $this->shape($user, []);
         $errors = [];
         $name = array_key_exists('name', $in) ? $this->name($in['name'], $errors) : $current['name'];
-        $email = array_key_exists('email', $in) ? $this->email($in['email'], $id, $errors) : $current['email'];
+        // The effective address is always checked, so an old non-@myaduan.my account must be moved
+        // before any other change saves. Only deactivating such an account is allowed as is.
+        $only_deactivate = array_keys($in) === ['active'] && !filter_var($in['active'], FILTER_VALIDATE_BOOLEAN);
+        $email = $only_deactivate ? $current['email'] : $this->email($in['email'] ?? $current['email'], $id, $errors);
         $role = array_key_exists('role', $in) ? $this->role($in['role'], $errors) : $current['role'];
         $active = array_key_exists('active', $in) ? filter_var($in['active'], FILTER_VALIDATE_BOOLEAN) : $current['active'];
         if ($role === 'none') {

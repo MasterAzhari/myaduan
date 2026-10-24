@@ -57,7 +57,11 @@ final class EmailTest extends TestCase
         $row = array_values(array_filter($list, fn($x) => $x['id'] === $u['id']))[0];
         $this->assertFalse($row['email_ok']);
         $this->assertSame(422, $this->call('POST', '/admin/users/' . $u['id'], ['email' => 'ali.lama@yahoo.com', 'name' => 'Ali Baru'], 'super')[0]);
-        $this->assertSame(200, $this->call('POST', '/admin/users/' . $u['id'], ['email' => 'ali@myaduan.my', 'name' => 'Ali Baru'], 'super')[0]);
+        [$status, $data] = $this->call('POST', '/admin/users/' . $u['id'], ['name' => 'Ali Baru'], 'super');
+        $this->assertSame(422, $status, 'a change that leaves out the e-mail still needs the old address moved');
+        $this->assertArrayHasKey('email', $data['data']['fields']);
+        $this->assertSame(200, $this->call('POST', '/admin/users/' . $u['id'], ['active' => false], 'super')[0], 'deactivating an old account needs no new address');
+        $this->assertSame(200, $this->call('POST', '/admin/users/' . $u['id'], ['email' => 'ali@myaduan.my', 'name' => 'Ali Baru', 'active' => true], 'super')[0]);
     }
 
     public function test_settings_keep_only_domain_addresses(): void
