@@ -9,8 +9,12 @@ if (!defined('ABSPATH')) {
 final class Settings
 {
     public const OPTION = 'myaduan_settings';
+    /** Every admin, Super Admin and system sender address uses this domain. */
+    public const STAFF_DOMAIN = 'myaduan.my';
     private const DEFAULTS = [
         'notify_emails' => '',
+        'mail_from' => 'info@myaduan.my',
+        'mail_from_name' => 'MyAduan Parlimen Gombak',
         'privacy_url' => '',
         'portal_path' => 'adminaduan',
         'emergency_text' => 'Untuk kecemasan yang mengancam nyawa, hubungi 999 (polis/ambulans) atau 994 (bomba) dahulu.',
@@ -32,17 +36,35 @@ final class Settings
         return (string) (is_array($all) && isset($all[$key]) ? $all[$key] : self::DEFAULTS[$key]);
     }
 
+    public static function staff_domain(): string
+    {
+        return strtolower((string) apply_filters('myaduan_staff_domain', self::STAFF_DOMAIN));
+    }
+
+    /** Whether an address is on the MyAduan staff domain (e.g. nama@myaduan.my). */
+    public static function is_staff_email(string $email): bool
+    {
+        return (bool) is_email($email) && str_ends_with(strtolower($email), '@' . self::staff_domain());
+    }
+
     /** @return list<string> */
     public static function notify_emails(): array
     {
-        $list = array_filter(array_map('trim', explode(',', self::get('notify_emails'))), 'is_email');
+        $list = array_filter(array_map('trim', explode(',', self::get('notify_emails'))), [self::class, 'is_staff_email']);
         if ($list) {
             return array_values($list);
         }
-        // Fallback: every Super Admin MyAduan.
+        // Fallback: every Super Admin MyAduan with a staff address, then the sender mailbox.
         $users = get_users(['capability' => Access::CAP_MANAGE, 'fields' => ['user_email']]);
-        $emails = array_values(array_filter(array_map(static fn($u) => $u->user_email, $users), 'is_email'));
-        return $emails ?: [get_option('admin_email')];
+        $emails = array_values(array_filter(array_map(static fn($u) => $u->user_email, $users), [self::class, 'is_staff_email']));
+        return $emails ?: [self::mail_from()];
+    }
+
+    /** Sender of every MyAduan e-mail; always on the staff domain. */
+    public static function mail_from(): string
+    {
+        $from = self::get('mail_from');
+        return self::is_staff_email($from) ? $from : 'info@' . self::staff_domain();
     }
 
     public static function portal_url(string $fragment = ''): string
@@ -90,8 +112,19 @@ final class Settings
     {
         $in = is_array($in) ? $in : [];
         $emails = array_filter(array_map('sanitize_email', explode(',', (string) ($in['notify_emails'] ?? ''))), 'is_email');
+        $staff = array_filter($emails, [self::class, 'is_staff_email']);
+        $domain = self::staff_domain();
+        if (count($staff) < count($emails) && function_exists('add_settings_error')) {
+            add_settings_error(self::OPTION, 'notify_domain', "E-mel notifikasi mesti @$domain. Alamat lain telah dibuang: " . implode(', ', array_diff($emails, $staff)));
+        }
+        $from = sanitize_email((string) ($in['mail_from'] ?? ''));
+        if ($from !== '' && !self::is_staff_email($from) && function_exists('add_settings_error')) {
+            add_settings_error(self::OPTION, 'from_domain', "E-mel penghantar mesti @$domain. Ditetapkan semula kepada info@$domain.");
+        }
         return [
-            'notify_emails' => implode(', ', $emails),
+            'notify_emails' => implode(', ', $staff),
+            'mail_from' => self::is_staff_email($from) ? $from : 'info@' . $domain,
+            'mail_from_name' => sanitize_text_field((string) ($in['mail_from_name'] ?? '')) ?: self::DEFAULTS['mail_from_name'],
             'privacy_url' => esc_url_raw((string) ($in['privacy_url'] ?? '')),
             'portal_path' => sanitize_title((string) ($in['portal_path'] ?? self::DEFAULTS['portal_path'])) ?: self::DEFAULTS['portal_path'],
             'emergency_text' => sanitize_text_field((string) ($in['emergency_text'] ?? self::DEFAULTS['emergency_text'])),
@@ -120,7 +153,9 @@ final class Settings
                 esc_attr($key), esc_html($label), esc_attr($name), esc_attr(self::get($key)), esc_attr($type), esc_html($help)
             );
         };
-        $row('notify_emails', 'E-mel notifikasi aduan baru', 'Pisahkan dengan koma. Kosong = semua Super Admin MyAduan.');
+        $row('notify_emails', 'E-mel notifikasi aduan baru', 'Mesti @' . self::staff_domain() . '. Pisahkan dengan koma. Kosong = semua Super Admin MyAduan.');
+        $row('mail_from', 'E-mel penghantar', 'Semua e-mel MyAduan (termasuk pengesahan kepada pengadu) dihantar dari alamat ini. Mesti @' . self::staff_domain() . ' dan wujud sebagai mailbox di Hostinger.', 'email');
+        $row('mail_from_name', 'Nama penghantar', 'Nama yang dilihat penerima.');
         $row('privacy_url', 'URL notis privasi', 'Dipaparkan pada borang aduan.', 'url');
         $row('portal_path', 'Laluan portal admin', 'Contoh: adminaduan → ' . home_url('/adminaduan/'));
         $row('emergency_text', 'Mesej kecemasan', 'Dipaparkan di atas borang dan di halaman utama.');

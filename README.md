@@ -41,14 +41,19 @@ Status: **Fasa 3**. Ada database, peranan, aliran status, REST API, borang awam,
 
 ### E-mel
 
-Dihantar melalui `wp_mail` dari queue `wp_myaduan_mail_queue`, setiap 5 minit, cuba 3 kali. E-mel tak mengandungi nama, IC atau telefon pengadu, cuma rujukan dan link portal.
+Dihantar melalui `wp_mail` dari queue `wp_myaduan_mail_queue`, setiap 5 minit, cuba 3 kali. Semua e-mel MyAduan dihantar **dari `info@myaduan.my`** (Tetapan → MyAduan → E-mel penghantar, mesti @myaduan.my). E-mel kepada staf tak mengandungi nama, IC atau telefon pengadu, cuma rujukan dan link portal.
 
 - Aduan baru → e-mel notifikasi (atau semua Super Admin)
+- Aduan baru → **pengadu**, jika dia isi e-mel (pilihan) dalam borang: nombor rujukan + link semak status. E-mel pengadu disimpan bersulit; alamat dalam queue dipadam lepas dihantar.
 - Kes ditugaskan → pegawai berkenaan
 - Mohon penutupan → e-mel notifikasi
 - Dikembalikan untuk tindakan → pegawai berkenaan
 
-Pada Hostinger, pasang plugin SMTP (contoh WP Mail SMTP) dengan peti `noreply@myaduan.my` supaya e-mel tak masuk spam.
+Pada Hostinger, cipta mailbox `info@myaduan.my` dan pasang plugin SMTP (contoh WP Mail SMTP) guna mailbox itu supaya e-mel tak masuk spam.
+
+### Akaun staf: wajib @myaduan.my
+
+Akaun admin, Super Admin dan pegawai yang dicipta atau diubah dalam portal mesti guna e-mel `@myaduan.my`. E-mel notifikasi dan e-mel penghantar pun mesti @myaduan.my; alamat lain dibuang semasa simpan. Akaun lama dengan domain lain ditanda merah dalam senarai Pengguna dan perlu ditukar sebelum perubahan lain boleh disimpan.
 
 ### Kunci sulitan: WAJIB backup
 

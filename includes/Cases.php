@@ -52,6 +52,7 @@ final class Cases
                     'ic_enc' => $this->crypto->encrypt($data['ic']),
                     'ic_index' => $this->crypto->blind_index($data['ic']),
                     'phone_enc' => $this->crypto->encrypt($data['phone']),
+                    'email_enc' => ($data['email'] ?? '') !== '' ? $this->crypto->encrypt($data['email']) : null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
@@ -276,6 +277,7 @@ final class Cases
                 'name' => $this->crypto->decrypt($row['name_enc']),
                 'ic' => $this->crypto->decrypt($row['ic_enc']),
                 'phone' => $this->crypto->decrypt($row['phone_enc']),
+                'email' => $row['email_enc'] ? $this->crypto->decrypt($row['email_enc']) : null,
             ],
             'owner_id' => (int) $row['owner_id'],
             'owner_name' => $names[(int) $row['owner_id']] ?? null,

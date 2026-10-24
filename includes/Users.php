@@ -161,6 +161,7 @@ final class Users
             'role' => $role,
             'active' => $site_admin || ($inactive === '' && $role !== 'none'),
             'site_admin' => $site_admin,
+            'email_ok' => Settings::is_staff_email($u->user_email),
             'policy' => Access::normalize_policy(get_user_meta($u->ID, Access::POLICY_META, true)),
             'open_cases' => count($open),
         ];
@@ -203,6 +204,8 @@ final class Users
         $email = sanitize_email((string) $value);
         if (!is_email($email)) {
             $errors['email'] = 'Masukkan alamat e-mel yang sah.';
+        } elseif (!Settings::is_staff_email($email)) {
+            $errors['email'] = 'Akaun MyAduan mesti guna e-mel @' . Settings::staff_domain() . '.';
         } elseif (($owner = email_exists($email)) && (int) $owner !== $self_id) {
             $errors['email'] = 'E-mel ini sudah digunakan oleh akaun lain.';
         }

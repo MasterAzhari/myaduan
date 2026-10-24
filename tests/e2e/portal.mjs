@@ -89,7 +89,7 @@ await desk.screenshot({ path: `${SHOTS}/p2-ditugaskan.png`, fullPage: true });
 /* ---- Super Admin: add a user ---- */
 await desk.locator('.nav a', { hasText: 'Pengguna' }).click();
 await desk.getByRole('button', { name: '+ Tambah pengguna' }).click();
-const email = `baru${Date.now()}@myaduan.test`;
+const email = `baru${Date.now()}@myaduan.my`;
 await desk.locator('.user-form input[name=name]').fill('Cik Pegawai Jalan');
 await desk.locator('.user-form input[name=email]').fill(email);
 await desk.locator('.user-form input[name=mode][value=selected]').check();
