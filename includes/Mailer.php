@@ -7,14 +7,18 @@ if (!defined('ABSPATH')) {
 
 /**
  * Email notifications through a queue, sent by WP-Cron (driven by a real
- * hPanel cron job on Hostinger). Emails never contain the complainant's
- * personal data, only the reference and a link into the portal.
+ * hPanel cron job on Hostinger). Staff emails never contain the complainant's
+ * personal data, only the reference and a link into the portal. The one email
+ * to the complainant (if they gave an address) carries their reference number;
+ * its address is wiped from the queue once sent.
  */
 final class Mailer
 {
     public const HOOK = 'myaduan_send_mail';
     public const BATCH = 20;
     public const MAX_ATTEMPTS = 3;
+    /** Dedupe-key prefix of the complainant's acknowledgement. */
+    private const ACK = 'ack:';
 
     public static function register(): void
     {
@@ -48,6 +52,24 @@ final class Mailer
     public static function on_created(int $id, string $reference): void
     {
         $case = self::summary($id);
+        $complainant = Plugin::crypto()->decrypt($case['email_enc'] ?? null);
+        if ($complainant) {
+            self::queue(self::ACK . $id, $complainant, "Aduan anda telah diterima: $reference", implode("\n", [
+                'Terima kasih. Aduan anda kepada MyAduan Parlimen Gombak telah diterima.',
+                '',
+                'Nombor rujukan: ' . $reference,
+                'Tajuk: ' . $case['title'],
+                '',
+                'Simpan nombor rujukan ini. Anda boleh semak status aduan pada bila-bila masa di:',
+                Settings::page_url('track_path'),
+                '(masukkan nombor rujukan atau No. kad pengenalan anda)',
+                '',
+                'Pegawai kami akan menyemak aduan anda dan menghubungi anda jika perlu.',
+                '',
+                '— MyAduan Parlimen Gombak',
+                'E-mel ini dihantar secara automatik kerana alamat ini diberikan semasa membuat aduan.',
+            ]), $id);
+        }
         foreach (Settings::notify_emails() as $to) {
             self::queue("new:$id:$to", $to, "[MyAduan] Aduan baru $reference", self::body([
                 'Aduan baru diterima dan menunggu saringan.',
@@ -115,11 +137,22 @@ final class Mailer
             $catch = static function (\WP_Error $e) use (&$error): void {
                 $error = $e->get_error_message();
             };
+            $from = static fn(): string => Settings::mail_from();
+            $from_name = static fn(): string => Settings::get('mail_from_name');
             add_action('wp_mail_failed', $catch);
+            add_filter('wp_mail_from', $from, 99);
+            add_filter('wp_mail_from_name', $from_name, 99);
             $ok = wp_mail($m['recipient'], $m['subject'], $m['body']);
+            remove_filter('wp_mail_from', $from, 99);
+            remove_filter('wp_mail_from_name', $from_name, 99);
             remove_action('wp_mail_failed', $catch);
             $state = $ok ? 'sent' : ((int) $m['attempts'] >= self::MAX_ATTEMPTS ? 'failed' : 'pending');
-            $wpdb->update($table, ['state' => $state, 'last_error' => $ok ? null : mb_substr($error ?: 'wp_mail gagal', 0, 255), 'updated_at' => Cases::now()], ['id' => $id]);
+            $done = ['state' => $state, 'last_error' => $ok ? null : mb_substr($error ?: 'wp_mail gagal', 0, 255), 'updated_at' => Cases::now()];
+            if ($state !== 'pending' && str_starts_with($m['dedupe_key'], self::ACK)) {
+                // The complainant's address is kept encrypted on the case only, not in plain text here.
+                $done['recipient'] = '';
+            }
+            $wpdb->update($table, $done, ['id' => $id]);
             $sent += $ok ? 1 : 0;
         }
         return $sent;
@@ -128,7 +161,7 @@ final class Mailer
     private static function summary(int $id): array
     {
         global $wpdb;
-        return $wpdb->get_row($wpdb->prepare('SELECT id, reference, title, location_text, priority, owner_id, assigned_at, version FROM ' . Schema::table('cases') . ' WHERE id = %d', $id), ARRAY_A) ?: [];
+        return $wpdb->get_row($wpdb->prepare('SELECT id, reference, title, location_text, priority, owner_id, assigned_at, version, email_enc FROM ' . Schema::table('cases') . ' WHERE id = %d', $id), ARRAY_A) ?: [];
     }
 
     private static function body(array $lines, int $id): string

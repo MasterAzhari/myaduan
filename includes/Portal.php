@@ -132,6 +132,7 @@ final class Portal
             'home' => home_url('/'),
             'site' => get_bloginfo('name'),
             'version' => MYADUAN_VERSION,
+            'staff_domain' => Settings::staff_domain(),
             'logo' => Settings::logo_url(),
         ];
         $json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
