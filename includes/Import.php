@@ -160,10 +160,12 @@ final class Import
                 'lng' => $lng,
                 'category_code' => $catalog->has_category($code) ? $code : null,
                 'dun_slug' => self::dun($catalog, $v['DUN'] ?? ''),
-                'name_enc' => $crypto->encrypt($v['Nama_Penuh'] ?? ''),
-                'ic_enc' => $crypto->encrypt($ic),
-                'ic_index' => $crypto->blind_index($ic),
-                'phone_enc' => $crypto->encrypt($phone),
+                // Old rows may lack a name, IC or phone. Empty stays empty, and a missing IC gets no
+                // index, so it never matches a status search.
+                'name_enc' => $crypto->encrypt($v['Nama_Penuh'] ?? '') ?? '',
+                'ic_enc' => $crypto->encrypt($ic) ?? '',
+                'ic_index' => $ic === '' ? '' : $crypto->blind_index($ic),
+                'phone_enc' => $crypto->encrypt($phone) ?? '',
                 'email_enc' => is_email($email) ? $crypto->encrypt($email) : null,
                 'source' => 'sheet',
                 'created_at' => $created,

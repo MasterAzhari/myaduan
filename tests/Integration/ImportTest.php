@@ -62,11 +62,12 @@ final class ImportTest extends TestCase
                 'Status' => 'MENUNGGU MAKLUM BALAS', 'Pegawai' => 'En. Kamal', 'Catatan' => 'Sudah maklum MPS', 'Tarikh_Kemas_Kini' => '03/09/2026 09:00:00',
             ],
             ['No_Rujukan' => 'GOM-20260902-0000000001', 'Tarikh_Masa' => '2026-09-02 08:00:00', 'Nama_Penuh' => 'Siti', 'No_KP' => '880512105432', 'No_Telefon' => '0129876543', 'Butiran_Aduan' => 'Longkang tersumbat depan rumah.', 'Status' => 'BARU', 'DUN' => 'Tiada DUN', 'Kod_Kategori' => 'Z99'],
+            ['No_Rujukan' => 'GOM-20260904-0000000003', 'Tarikh_Masa' => '2026-09-04 10:00:00', 'Nama_Penuh' => 'Tanpa IC', 'No_Telefon' => '0131112222', 'Butiran_Aduan' => 'Anjing liar dalam taman.', 'Status' => 'BARU'],
             ['No_Rujukan' => 'BUKAN-RUJUKAN', 'Butiran_Aduan' => 'x'],
             ['No_Rujukan' => 'GOM-20260903-0000000002', 'Butiran_Aduan' => ''],
         ]);
         $r = Import::csv($this->csv, self::$users['super']);
-        $this->assertSame(2, $r['imported'], wp_json_encode($r));
+        $this->assertSame(3, $r['imported'], wp_json_encode($r));
         $this->assertSame(1, $r['photos']);
         $this->assertSame(1, $r['photos_failed']);
         $this->assertCount(2, $r['errors']);
@@ -91,13 +92,16 @@ final class ImportTest extends TestCase
         $this->assertSame(['DITERIMA', null, null], [$other['status'], $other['category_code'], $other['dun_slug']]);
         [, $track] = $this->call('POST', '/track', ['query' => '880512-10-5432']);
         $this->assertSame('GOM-20260902-0000000001', $track['items'][0]['reference'], 'imported cases can be tracked by IC');
+        $no_ic = $this->call('GET', '/admin/cases/' . $this->case_id('GOM-20260904-0000000003'), [], 'super')[1];
+        $this->assertSame(['Tanpa IC', null], [$no_ic['complainant']['name'], $no_ic['complainant']['ic']], 'a row without IC still imports');
+        $this->assertSame('1', $wpdb->get_var($wpdb->prepare("SELECT ic_index = '' FROM " . Schema::table('cases') . ' WHERE reference = %s', 'GOM-20260904-0000000003')));
 
         // Running again adds nothing new and only retries photos of cases that have none.
         $this->fetched = [];
         $again = Import::csv($this->csv, self::$users['super']);
-        $this->assertSame([0, 2], [$again['imported'], $again['skipped']]);
+        $this->assertSame([0, 3], [$again['imported'], $again['skipped']]);
         $this->assertSame([], $this->fetched, 'case with a photo already is not fetched again');
-        $this->assertSame('2', $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::table('cases')));
+        $this->assertSame('3', $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::table('cases')));
     }
 
     public function test_rejects_wrong_file(): void
