@@ -146,12 +146,23 @@ final class Phase5Test extends TestCase
         $this->assertSame([200, 'SENDIRI'], [$status, $c['track']]);
         $this->assertContains('request_close', $c['allowed_operations'], 'closing stays available');
 
-        // A Super Admin deciding on an unassigned case takes it on.
+        // Nobody processes a case until it is assigned, the Super Admin included.
+        $this->assertSame(422, $this->op('super', $id, 'refer', ['agency_ids' => [$mps], 'note' => 'Super Admin bukan pegawai kes.'])[0], 'assigned to someone else');
         $other = $this->case_id($this->submit()['reference']);
+        [$status, $err] = $this->op('super', $other, 'refer', ['agency_ids' => [$mps], 'note' => 'Terus panjangkan kepada MPS.']);
+        $this->assertSame(422, $status);
+        $this->assertStringContainsString('Tugaskan kes ini', $err['message']);
+        [, $c] = $this->call('GET', "/admin/cases/$other", [], 'super');
+        $this->assertSame(['classify', 'assign'], $c['allowed_operations'], 'before assignment the Super Admin can only classify and assign');
+        $this->assertSame(422, $this->op('super', $other, 'comment', ['note' => 'Catatan sebelum ditugaskan.'])[0]);
+        $this->op('super', $other, 'classify', ['category_code' => 'A01']);
+        [, $seen] = $this->call('GET', "/admin/cases/$other", [], 'a01');
+        $this->assertSame([], $seen['allowed_operations'] ?? null, 'officers can read an unassigned case in their category but do nothing');
+        $this->op('super', $other, 'assign', ['owner_id' => self::$users['super']]);
         [$status, $c] = $this->op('super', $other, 'refer', ['agency_ids' => [$mps], 'note' => 'Terus panjangkan kepada MPS.']);
         $this->assertSame(200, $status, wp_json_encode($c));
         $this->assertSame([self::$users['super'], 'DALAM TINDAKAN'], [$c['owner_id'], $c['status']]);
-        $this->assertNotNull($c['accepted_at']);
+        $this->assertNotNull($c['accepted_at'], 'assigned to themselves, deciding also accepts');
 
         $inactive = (new Agencies())->save(0, ['name' => 'Tutup ' . uniqid(), 'email' => 'tutup@agensi.gov.my', 'active' => false]);
         $this->assertSame(422, $this->op('super', $other, 'refer', ['agency_ids' => [$inactive['id']], 'note' => 'Agensi tidak aktif lagi.'])[0]);
