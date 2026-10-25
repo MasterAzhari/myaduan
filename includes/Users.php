@@ -14,6 +14,9 @@ if (!defined('ABSPATH')) {
  * WordPress itself. Accounts with a staff e-mail but no MyAduan role (made in
  * wp-admin, say) are listed too, so a Super Admin can give them a role here. Deactivating removes the role (and every session) but keeps
  * the account, so case history still shows who did what.
+ *
+ * The Super Admin sets each account's first password and resets forgotten ones.
+ * Everyone changes their own password in the portal; e-mailed reset links are off.
  */
 final class Users
 {
@@ -40,12 +43,15 @@ final class Users
         return array_map(fn(\WP_User $u): array => $this->shape($u, $open[$u->ID] ?? []), $users);
     }
 
-    /** @param array{name?:mixed, email?:mixed, role?:mixed, policy?:mixed} $in */
+    public const PASSWORD_MIN = 8;
+
+    /** @param array{name?:mixed, email?:mixed, password?:mixed, role?:mixed, policy?:mixed} $in */
     public function create(array $in): array
     {
         $errors = [];
         $name = $this->name($in['name'] ?? '', $errors);
         $email = $this->email($in['email'] ?? '', 0, $errors);
+        $password = $this->password($in['password'] ?? '', $errors);
         $role = $this->role($in['role'] ?? '', $errors);
         $policy = $role === 'officer' ? $this->policy($in['policy'] ?? null, $errors) : null;
         if ($errors) {
@@ -54,7 +60,7 @@ final class Users
         $id = wp_insert_user([
             'user_login' => $this->unique_login($email),
             'user_email' => $email,
-            'user_pass' => wp_generate_password(24, true, true),
+            'user_pass' => $password,
             'display_name' => $name,
             'first_name' => $name,
             'role' => self::ROLES[$role],
@@ -63,12 +69,10 @@ final class Users
             throw new FieldErrors(['email' => $id->get_error_message()]);
         }
         $policy ? update_user_meta($id, Access::POLICY_META, $policy) : delete_user_meta($id, Access::POLICY_META);
-        // The new user sets their own password from the link in this e-mail.
-        wp_new_user_notification($id, null, 'user');
         return $this->shape(new \WP_User($id), []);
     }
 
-    /** @param array{name?:mixed, email?:mixed, role?:mixed, policy?:mixed, active?:mixed} $in */
+    /** @param array{name?:mixed, email?:mixed, password?:mixed, role?:mixed, policy?:mixed, active?:mixed} $in */
     public function update(int $id, array $in, int $actor_id): array
     {
         $user = get_userdata($id);
@@ -85,6 +89,11 @@ final class Users
         // before any other change saves. Only deactivating such an account is allowed as is.
         $only_deactivate = array_keys($in) === ['active'] && !filter_var($in['active'], FILTER_VALIDATE_BOOLEAN);
         $email = $only_deactivate ? $current['email'] : $this->email($in['email'] ?? $current['email'], $id, $errors);
+        // A new password from the Super Admin, for someone who forgot theirs. Blank keeps the current one.
+        $password = isset($in['password']) && $in['password'] !== '' ? $this->password($in['password'], $errors) : null;
+        if ($password !== null && $id === $actor_id) {
+            $errors['password'] = 'Tukar kata laluan anda sendiri di halaman Profil.';
+        }
         $role = array_key_exists('role', $in) ? $this->role($in['role'], $errors) : $current['role'];
         // An account getting its first role turns active unless told otherwise.
         $active = array_key_exists('active', $in) ? filter_var($in['active'], FILTER_VALIDATE_BOOLEAN) : ($current['active'] || $current['role'] === 'none');
@@ -118,6 +127,11 @@ final class Users
         if (is_wp_error($updated)) {
             throw new FieldErrors(['email' => $updated->get_error_message()]);
         }
+        if ($password !== null) {
+            // Signs the user out everywhere, so only the new password works from now on.
+            wp_set_password($password, $id);
+            \WP_Session_Tokens::get_instance($id)->destroy_all();
+        }
         // Only MyAduan roles change; any other WordPress role the account has stays.
         foreach (self::ROLES as $wp_role) {
             $user->remove_role($wp_role);
@@ -132,6 +146,61 @@ final class Users
         $policy ? update_user_meta($id, Access::POLICY_META, $policy) : delete_user_meta($id, Access::POLICY_META);
         clean_user_cache($id);
         return $this->shape(get_userdata($id), $this->open_cases([$id])[$id] ?? []);
+    }
+
+    /**
+     * The signed-in user changes their own password. The other sessions end;
+     * this one gets a fresh login cookie, so the portal reloads afterwards.
+     */
+    public function change_own_password(int $id, mixed $current, mixed $new): void
+    {
+        $user = get_userdata($id);
+        $errors = [];
+        if (!$user || !wp_check_password((string) $current, $user->user_pass, $id)) {
+            $errors['current'] = 'Kata laluan semasa tidak betul.';
+        }
+        $password = $this->password($new, $errors);
+        if (!$errors && $password === (string) $current) {
+            $errors['password'] = 'Kata laluan baru mesti berbeza daripada yang semasa.';
+        }
+        if ($errors) {
+            throw new FieldErrors($errors);
+        }
+        \WP_Session_Tokens::get_instance($id)->destroy_all();
+        // wp_update_user() sets a new login cookie when it is the current user's password.
+        $done = wp_update_user(['ID' => $id, 'user_pass' => $password]);
+        if (is_wp_error($done)) {
+            throw new FieldErrors(['password' => $done->get_error_message()]);
+        }
+    }
+
+    /** MyAduan accounts other than site administrators. */
+    public static function is_staff_account(\WP_User $u): bool
+    {
+        return !user_can($u, 'manage_options') && (
+            (bool) array_intersect($u->roles, array_values(self::ROLES))
+            || get_user_meta($u->ID, self::INACTIVE_META, true) !== ''
+            || Settings::is_staff_email($u->user_email)
+        );
+    }
+
+    /** allow_password_reset: no e-mailed reset links for MyAduan accounts; the Super Admin sets a new password. */
+    public static function no_email_reset(bool|\WP_Error $allow, int $user_id): bool|\WP_Error
+    {
+        $user = get_userdata($user_id);
+        if ($user && self::is_staff_account($user)) {
+            return new \WP_Error('myaduan_no_reset', 'Lupa kata laluan? Minta Super Admin MyAduan tetapkan kata laluan baru untuk anda.');
+        }
+        return $allow;
+    }
+
+    /** user_profile_update_errors: a MyAduan account keeps its @myaduan.my address, wherever it is edited. */
+    public static function profile_errors(\WP_Error $errors, bool $update, \stdClass $user): void
+    {
+        $existing = !empty($user->ID) ? get_userdata((int) $user->ID) : false;
+        if ($existing && self::is_staff_account($existing) && isset($user->user_email) && !Settings::is_staff_email((string) $user->user_email)) {
+            $errors->add('email', 'Akaun MyAduan mesti guna e-mel @' . Settings::staff_domain() . '.');
+        }
     }
 
     /**
@@ -221,6 +290,17 @@ final class Users
                 : 'Akaun dengan e-mel ini sudah wujud. Cari namanya dalam senarai di bawah dan tekan Ubah untuk beri peranan.';
         }
         return $email;
+    }
+
+    private function password(mixed $value, array &$errors): string
+    {
+        $password = is_string($value) ? $value : '';
+        if (mb_strlen($password) < self::PASSWORD_MIN || mb_strlen($password) > 100 || !preg_match('/\pL/u', $password) || !preg_match('/\d/', $password)) {
+            $errors['password'] = 'Kata laluan mesti sekurang-kurangnya ' . self::PASSWORD_MIN . ' aksara, dengan huruf dan nombor.';
+        } elseif (trim($password) !== $password) {
+            $errors['password'] = 'Kata laluan tidak boleh bermula atau berakhir dengan ruang kosong.';
+        }
+        return $password;
     }
 
     private function role(mixed $value, array &$errors): string

@@ -39,14 +39,14 @@ final class EmailTest extends TestCase
 
     public function test_staff_accounts_must_use_the_domain(): void
     {
-        [$status, $data] = $this->call('POST', '/admin/users', ['name' => 'Ali Gmail', 'email' => 'ali@gmail.com', 'role' => 'superadmin'], 'super');
+        [$status, $data] = $this->call('POST', '/admin/users', ['password' => 'Rahsia1234', 'name' => 'Ali Gmail', 'email' => 'ali@gmail.com', 'role' => 'superadmin'], 'super');
         $this->assertSame(422, $status);
         $this->assertStringContainsString('@myaduan.my', $data['data']['fields']['email']);
         $this->assertFalse(email_exists('ali@gmail.com'));
-        [$status] = $this->call('POST', '/admin/users', ['name' => 'Ali', 'email' => 'ali@myaduan.my.evil.com', 'role' => 'superadmin'], 'super');
+        [$status] = $this->call('POST', '/admin/users', ['password' => 'Rahsia1234', 'name' => 'Ali', 'email' => 'ali@myaduan.my.evil.com', 'role' => 'superadmin'], 'super');
         $this->assertSame(422, $status, 'lookalike domains are refused');
 
-        [$status, $u] = $this->call('POST', '/admin/users', ['name' => 'Ali Urusetia', 'email' => 'Ali.Urusetia@MyAduan.my', 'role' => 'superadmin'], 'super');
+        [$status, $u] = $this->call('POST', '/admin/users', ['password' => 'Rahsia1234', 'name' => 'Ali Urusetia', 'email' => 'Ali.Urusetia@MyAduan.my', 'role' => 'superadmin'], 'super');
         $this->assertSame(201, $status, wp_json_encode($u));
         $this->created[] = $u['id'];
         $this->assertTrue($u['email_ok']);

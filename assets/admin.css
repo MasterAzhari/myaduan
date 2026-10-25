@@ -217,3 +217,8 @@ tr.inactive td { color: var(--muted); }
   .main-col::before, td:first-child::before { display: none !important; }
   .pager { flex-wrap: wrap; }
 }
+
+/* password fields */
+.pw-wrap { display: flex; gap: 6px; align-items: stretch; }
+.pw-wrap input { flex: 1; min-width: 0; }
+.pw-wrap .pw-toggle { flex: none; }

@@ -89,10 +89,11 @@ define('MYADUAN_STORAGE_DIR', '/home/uXXXX/myaduan-files'); // kalau nak tukar l
 ### Portal admin (`/adminaduan/`)
 
 - Halaman sendiri di luar tema (laluan boleh ubah dalam Tetapan → MyAduan). Belum log masuk → dihantar ke login WordPress, kemudian balik ke portal.
-- Akaun MyAduan sahaja (Pegawai, Super Admin MyAduan, Pemerhati) terus masuk portal selepas login dan tak boleh masuk wp-admin, kecuali halaman Profil untuk tukar kata laluan.
+- Akaun MyAduan sahaja (Pegawai, Super Admin MyAduan, Pemerhati) terus masuk portal selepas login dan tak boleh masuk wp-admin (profile.php dihantar ke halaman Profil portal).
 - **Senarai kes**: kiraan ringkas yang boleh diklik (belum dikelaskan, belum ditugaskan, menunggu pengesahan, belum diterima, lewat susulan), carian dan tapisan. Pautan boleh di-bookmark.
 - **Butiran kes**: butiran, gambar, pengadu (telefon + WhatsApp), maklumat kes, sejarah lengkap, dan butang tindakan ikut peranan dan status.
-- **Pengguna** (Super Admin): cipta akaun (e-mel tetapan kata laluan dihantar sendiri), tukar peranan dan kategori, nyahaktif. Tak boleh nyahaktif atau buang kategori pegawai yang masih pegang kes terbuka. Akaun Administrator WordPress diurus dalam WordPress.
+- **Pengguna** (Super Admin): cipta akaun dengan nama, e-mel @myaduan.my dan kata laluan (sekurang-kurangnya 8 aksara, huruf dan nombor), tukar peranan dan kategori, nyahaktif. Jika staf terlupa kata laluan, Super Admin tekan **Ubah** dan isi **Kata laluan baru**; staf itu dilog keluar dari semua peranti.
+- **Profil** (semua): lihat nama, e-mel dan peranan, dan tukar kata laluan sendiri (perlu kata laluan semasa). Peranti lain dilog keluar. Pautan "Lupa kata laluan" melalui e-mel ditutup untuk akaun MyAduan; minta Super Admin. Tak boleh nyahaktif atau buang kategori pegawai yang masih pegang kes terbuka. Akaun Administrator WordPress diurus dalam WordPress.
 - Sesuai untuk telefon; pegawai di lapangan boleh terima tugasan dan rekod tindakan dari telefon.
 - **Keputusan kes** (hanya pegawai yang ditugaskan): *Panjangkan ke agensi* (pilih agensi, e-mel dihantar), *Tindakan sendiri*, *Perlu maklumat lanjut*, atau *Tutup kes* (mohon penutupan → Super Admin sahkan). Tiada siapa boleh proses aduan sebelum Super Admin tugaskan kepada pegawai atau dirinya sendiri. *Status agensi* rekod maklum balas dan no. rujukan agensi.
 - **Agensi** (Super Admin): 40 agensi dari senarai rasmi dimasukkan semasa pasang. Tambah, ubah e-mel/CC, atau nyahaktif.
@@ -126,14 +127,15 @@ Operasi: `classify`, `assign`, `accept`, `action`, `comment`, `request_close`, `
 | POST | `/complaints` | Awam, multipart. `client_key` (64 hex), `name`, `ic`, `phone`, `details`, `location`, `consent`, pilihan `lat`/`lng`, `images[]` (maks 3, JPG/PNG/WebP, 5 MB). Had 5 sejam setiap IP |
 | POST | `/track` | Awam. `query` = rujukan atau IC. Pulang rujukan, status, mesej awam, tarikh sahaja |
 | GET | `/admin/me` | Pengguna MyAduan |
+| POST | `/admin/me/password` | Pengguna MyAduan. `current`, `password` |
 | GET | `/admin/catalog` | Pengguna MyAduan (senarai pegawai untuk Super Admin) |
 | GET | `/admin/stats` | Pengguna MyAduan |
 | GET | `/admin/cases` | Super Admin, Pegawai. Filter: `status`, `flag` (`open`, `not_accepted`, `overdue`, `agency`, `need_info`), `owner` (id atau `unassigned`), `category` (`none` = belum dikelaskan), `dun`, `area`, `q`, `ic`, `from`, `to`, `page` |
 | GET | `/admin/cases/{id}` | Super Admin, Pegawai (dicatat dalam `access_log`) |
 | GET | `/admin/files/{id}` | Super Admin, Pegawai yang ada akses kes (dicatat dalam `access_log`) |
 | POST | `/admin/cases/{id}/operations` | `op`, `version`, `request_id` (64 hex) + medan operasi |
-| GET, POST | `/admin/users` | Super Admin. POST: `name`, `email`, `role` (`superadmin`/`officer`/`viewer`), `policy` untuk pegawai |
-| POST | `/admin/users/{id}` | Super Admin. Mana-mana medan di atas + `active` |
+| GET, POST | `/admin/users` | Super Admin. POST: `name`, `email`, `password`, `role` (`superadmin`/`officer`/`viewer`), `policy` untuk pegawai |
+| POST | `/admin/users/{id}` | Super Admin. Mana-mana medan di atas + `active`; `password` kosong = tiada perubahan |
 | GET, POST | `/admin/agencies`, POST `/admin/agencies/{id}` | Super Admin. `name`, `officer`, `email`, `cc`, `active` |
 | GET | `/admin/notifications` | Pengguna MyAduan. `unread=1`, `count=1` |
 | POST | `/admin/notifications/read` | `ids` (kosong = semua) |

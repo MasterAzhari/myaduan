@@ -174,7 +174,7 @@
         h('div', { class: 'who' },
           bell,
           h('span', { class: 'who-name' }, me.name, h('small', {}, ROLE[me.role])),
-          h('a', { href: cfg.profile }, 'Profil'),
+          h('a', { href: '#/profil', 'data-key': 'profil' }, 'Profil'),
           h('a', { href: cfg.logout, onclick: logout }, 'Log keluar'))),
       view);
   }
@@ -182,13 +182,14 @@
   async function route() {
     const { parts, query } = parseHash();
     const key = parts[0] || '';
-    for (const a of app.querySelectorAll('.nav a, a.bell')) a.classList.toggle('active', a.dataset.key === key);
+    for (const a of app.querySelectorAll('.nav a, a.bell, .who a[data-key]')) a.classList.toggle('active', a.dataset.key === key);
     const canCases = state.me.can.work || state.me.can.manage;
     try {
       if (key === 'kes' && parts[1] && canCases) await caseView(parseInt(parts[1], 10));
       else if (key === 'pengguna' && state.me.can.manage) await usersView();
       else if (key === 'agensi' && state.me.can.manage) await agenciesView();
       else if (key === 'notifikasi') await notificationsView();
+      else if (key === 'profil') profileView();
       else if (canCases) { state.lastList = location.hash || '#/kes'; await listView(query); }
       else await summaryView();
     } catch (e) {
@@ -214,6 +215,20 @@
       help ? h('small', { class: 'help' }, help) : null,
       h('small', { class: 'err', id: id + '-err' }));
   }
+  // A password box with a show/hide button, so a Super Admin can read back what they typed.
+  function passwordInput(name, attrs = {}) {
+    const input = h('input', Object.assign({ name, type: 'password', autocomplete: 'new-password', minlength: '8', maxlength: '100', spellcheck: 'false', autocapitalize: 'off' }, attrs));
+    const btn = h('button', { class: 'btn ghost small pw-toggle', type: 'button', 'aria-pressed': 'false', onclick: () => {
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.textContent = show ? 'Sembunyi' : 'Tunjuk';
+      btn.setAttribute('aria-pressed', String(show));
+    } }, 'Tunjuk');
+    input.id = 'f-' + name + '-' + Math.random().toString(36).slice(2, 7);
+    return { input, wrap: h('div', { class: 'pw-wrap' }, input, btn) };
+  }
+  const PW_HELP = 'Sekurang-kurangnya 8 aksara, dengan huruf dan nombor.';
+
   function select(name, options, value, attrs = {}) {
     const el = h('select', Object.assign({ name }, attrs));
     for (const o of options) {
@@ -723,7 +738,7 @@
       h('div', { class: 'card table-wrap' }, h('table', { class: 'users' },
         h('thead', {}, h('tr', {}, ['Nama', 'Peranan', 'Kategori dibenarkan', 'Kes terbuka', 'Status', ''].map((t) => h('th', { scope: 'col' }, t)))),
         h('tbody', {}, rows))),
-      h('p', { class: 'muted small' }, 'Pengguna baru menerima e-mel untuk menetapkan kata laluan sendiri. Akaun yang dinyahaktifkan tidak boleh log masuk, tetapi sejarah kesnya kekal.'));
+      h('p', { class: 'muted small' }, 'Beritahu kata laluan kepada pengguna secara terus (bukan melalui kumpulan chat). Mereka boleh menukarnya sendiri di halaman Profil. Jika terlupa, tekan Ubah dan tetapkan kata laluan baru. Akaun yang dinyahaktifkan tidak boleh log masuk, tetapi sejarah kesnya kekal.'));
     if (editId) { const u = users.find((x) => x.id === editId); if (u) open(u); }
   }
 
@@ -759,6 +774,7 @@
       showErrors(form);
       const r = form.elements.role.value;
       const body = { name: form.elements.name.value, email: form.elements.email.value, role: r };
+      if (form.elements.password.value) body.password = form.elements.password.value;
       if (r === 'officer') {
         body.policy = { mode: form.elements.mode.value, codes: [...form.querySelectorAll('input[name=codes]:checked')].map((x) => x.value) };
       }
@@ -766,7 +782,8 @@
       await submitting(form, async () => {
         try {
           const saved = await api(isNew ? '/admin/users' : '/admin/users/' + u.id, { method: 'POST', body });
-          toast(isNew ? `Akaun dicipta. E-mel untuk menetapkan kata laluan dihantar ke ${saved.email}.` : 'Perubahan disimpan.');
+          toast(isNew ? `Akaun ${saved.email} dicipta. Beritahu kata laluannya kepada ${saved.name}.`
+            : body.password ? `Kata laluan baru ${saved.name} disimpan. Mereka perlu log masuk semula dengan kata laluan ini.` : 'Perubahan disimpan.');
           await loadCatalog();
           await usersView();
         } catch (err) { showErrors(form, err); }
@@ -776,7 +793,14 @@
       h('div', { class: 'two' },
         field('Nama penuh', h('input', { name: 'name', value: u?.name || '', autocomplete: 'off', required: true })),
         field('E-mel', h('input', { name: 'email', type: 'email', value: u?.email || '', autocomplete: 'off', required: true, placeholder: `nama@${cfg.staff_domain}` }),
-          { help: `Mesti e-mel @${cfg.staff_domain}.` + (isNew ? ' Pautan tetapan kata laluan dihantar ke e-mel ini.' : '') })),
+          { help: `Mesti e-mel @${cfg.staff_domain}.` })),
+      (() => {
+        const pw = passwordInput('password', isNew ? { required: true } : {});
+        return h('div', { class: 'field', 'data-field': 'password' },
+          h('label', { for: pw.input.id }, isNew ? 'Kata laluan' : 'Kata laluan baru'), pw.wrap,
+          h('small', { class: 'help' }, isNew ? PW_HELP : 'Isi hanya jika pengguna terlupa kata laluan. ' + PW_HELP + ' Pengguna akan dilog keluar dari semua peranti.'),
+          h('small', { class: 'err' }));
+      })(),
       roleBox, policyBox,
       isNew ? null : h('label', { class: 'check field wide' }, h('input', { type: 'checkbox', name: 'active', checked: u.active || u.needs_role }), 'Akaun aktif (boleh log masuk)'),
       !isNew && u.open_cases ? h('p', { class: 'muted small' }, `Pengguna ini memegang ${u.open_cases} kes terbuka. Tugaskan semula kes tersebut sebelum menyahaktifkan atau membuang kategorinya.`) : null,
@@ -793,6 +817,51 @@
     form.addEventListener('change', sync);
     sync();
     return form;
+  }
+
+  /* ---------- profile ---------- */
+
+  function profileView() {
+    const me = state.me;
+    const cur = passwordInput('current', { autocomplete: 'current-password', required: true, minlength: null });
+    const pw = passwordInput('password', { required: true });
+    const again = passwordInput('again', { required: true });
+    const pwField = (label, p, name, help) => h('div', { class: 'field', 'data-field': name },
+      h('label', { for: p.input.id }, label), p.wrap, help ? h('small', { class: 'help' }, help) : null, h('small', { class: 'err' }));
+    const form = h('form', { class: 'card user-form', novalidate: true, onsubmit: async (e) => {
+      e.preventDefault();
+      showErrors(form);
+      if (pw.input.value !== again.input.value) {
+        showErrors(form, { message: 'Kata laluan tidak sepadan.', fields: { again: 'Taip semula kata laluan baru yang sama.' } });
+        return;
+      }
+      await submitting(form, async () => {
+        try {
+          await api('/admin/me/password', { method: 'POST', body: { current: cur.input.value, password: pw.input.value } });
+          form.replaceChildren(h('h2', {}, 'Kata laluan ditukar'), h('p', {}, 'Peranti lain telah dilog keluar. Memuatkan semula portal…'));
+          // The login cookie changed, so the page needs a fresh security token.
+          setTimeout(() => location.reload(), 1500);
+        } catch (err) { showErrors(form, err); }
+      });
+    } },
+      h('h2', {}, 'Tukar kata laluan'),
+      h('div', { class: 'two' },
+        pwField('Kata laluan semasa', cur, 'current'),
+        h('div'),
+        pwField('Kata laluan baru', pw, 'password', PW_HELP),
+        pwField('Taip semula kata laluan baru', again, 'again')),
+      h('p', { class: 'form-error', role: 'alert' }),
+      h('div', { class: 'form-actions' }, h('button', { class: 'btn', type: 'submit' }, 'Tukar kata laluan')));
+    view.replaceChildren(
+      h('div', { class: 'page-head' }, h('h1', {}, 'Profil')),
+      h('div', { class: 'card' },
+        h('dl', { class: 'facts' },
+          h('dt', {}, 'Nama'), h('dd', {}, me.name),
+          h('dt', {}, 'E-mel'), h('dd', {}, me.email || '—'),
+          h('dt', {}, 'Peranan'), h('dd', {}, ROLE[me.role])),
+        h('p', { class: 'muted small' }, me.can.manage ? 'Nama dan e-mel diubah di halaman Pengguna.' : 'Untuk menukar nama atau e-mel, hubungi Super Admin.')),
+      form,
+      h('p', { class: 'muted small' }, 'Lupa kata laluan? Minta Super Admin tetapkan kata laluan baru untuk anda.'));
   }
 
   /* ---------- notifications ---------- */

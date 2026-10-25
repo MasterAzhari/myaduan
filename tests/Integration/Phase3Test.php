@@ -80,7 +80,7 @@ final class Phase3Test extends TestCase
     {
         $this->assertSame(401, $this->call('GET', '/admin/users')[0]);
         $this->assertSame(403, $this->call('GET', '/admin/users', [], 'a01')[0]);
-        $this->assertSame(403, $this->call('POST', '/admin/users', ['name' => 'X', 'email' => 'x@myaduan.my', 'role' => 'superadmin'], 'a01')[0]);
+        $this->assertSame(403, $this->call('POST', '/admin/users', ['password' => 'Rahsia1234', 'name' => 'X', 'email' => 'x@myaduan.my', 'role' => 'superadmin'], 'a01')[0]);
         [$status, $users] = $this->call('GET', '/admin/users', [], 'super');
         $this->assertSame(200, $status);
         $logins = array_column($users, 'login');
@@ -88,10 +88,10 @@ final class Phase3Test extends TestCase
         $this->assertContains('t_viewer', $logins);
     }
 
-    public function test_create_officer_sends_password_link(): void
+    public function test_create_officer_with_password(): void
     {
         [$status, $u] = $this->call('POST', '/admin/users', [
-            'name' => 'Ahmad Pegawai', 'email' => 'ahmad.pegawai@myaduan.my', 'role' => 'officer',
+            'password' => 'Rahsia1234', 'name' => 'Ahmad Pegawai', 'email' => 'ahmad.pegawai@myaduan.my', 'role' => 'officer',
             'policy' => ['mode' => 'selected', 'codes' => ['A04', 'A01', 'Z99']],
         ], 'super');
         $this->assertSame(201, $status, wp_json_encode($u));
@@ -100,8 +100,8 @@ final class Phase3Test extends TestCase
         $this->assertSame(['mode' => 'selected', 'codes' => ['A04', 'A01']], $u['policy'], 'unknown categories dropped');
         $this->assertTrue($u['active']);
         $this->assertContains('myaduan_officer', (new WP_User($u['id']))->roles);
-        $this->assertCount(1, $this->mails);
-        $this->assertSame('ahmad.pegawai@myaduan.my', $this->mails[0]['to']);
+        $this->assertCount(0, $this->mails, 'no e-mailed link: the Super Admin set the password');
+        $this->assertInstanceOf(WP_User::class, wp_authenticate('ahmad.pegawai@myaduan.my', 'Rahsia1234'));
 
         // The new officer can be assigned a case in their category straight away.
         $id = $this->case_id($this->submit()['reference']);
@@ -111,10 +111,13 @@ final class Phase3Test extends TestCase
 
     public function test_create_validation(): void
     {
-        [$status, $data] = $this->call('POST', '/admin/users', ['name' => 'A', 'email' => 't_super@myaduan.my', 'role' => 'boss'], 'super');
+        [$status, $data] = $this->call('POST', '/admin/users', ['password' => 'Rahsia1234', 'name' => 'A', 'email' => 't_super@myaduan.my', 'role' => 'boss'], 'super');
         $this->assertSame(422, $status);
         $this->assertSame(['name', 'email', 'role'], array_keys($data['data']['fields']));
-        [$status, $data] = $this->call('POST', '/admin/users', ['name' => 'Tiada Kategori', 'email' => 'tiada@myaduan.my', 'role' => 'officer', 'policy' => ['mode' => 'selected', 'codes' => []]], 'super');
+        [$status, $data] = $this->call('POST', '/admin/users', ['name' => 'Tiada Kata', 'email' => 'tiadakata@myaduan.my', 'role' => 'viewer'], 'super');
+        $this->assertSame(422, $status);
+        $this->assertSame(['password'], array_keys($data['data']['fields']));
+        [$status, $data] = $this->call('POST', '/admin/users', ['password' => 'Rahsia1234', 'name' => 'Tiada Kategori', 'email' => 'tiada@myaduan.my', 'role' => 'officer', 'policy' => ['mode' => 'selected', 'codes' => []]], 'super');
         $this->assertSame(422, $status);
         $this->assertArrayHasKey('policy', $data['data']['fields']);
         $this->assertFalse(email_exists('tiada@myaduan.my'));
@@ -205,7 +208,7 @@ final class Phase3Test extends TestCase
         $this->assertSame(['none', false, true], [$row['role'], $row['active'], $row['needs_role']]);
         $this->assertSame([], array_filter($list, static fn($u) => $u['id'] === $outsider), 'other accounts stay hidden');
 
-        [$status] = $this->call('POST', '/admin/users', ['name' => 'Tarmizi', 'email' => 'tarmizi.wp@myaduan.my', 'role' => 'officer', 'policy' => ['mode' => 'all']], 'super');
+        [$status] = $this->call('POST', '/admin/users', ['password' => 'Rahsia1234', 'name' => 'Tarmizi', 'email' => 'tarmizi.wp@myaduan.my', 'role' => 'officer', 'policy' => ['mode' => 'all']], 'super');
         $this->assertSame(422, $status, 'adding the same e-mail again points to the list instead');
 
         [$status, $u] = $this->call('POST', "/admin/users/$id", ['name' => 'Tarmizi', 'email' => 'tarmizi.wp@myaduan.my', 'role' => 'officer', 'policy' => ['mode' => 'all']], 'super');
@@ -256,7 +259,7 @@ final class Phase3Test extends TestCase
 
     private function new_officer(string $email, array $policy): int
     {
-        [$status, $u] = $this->call('POST', '/admin/users', ['name' => 'Pegawai Ujian', 'email' => $email, 'role' => 'officer', 'policy' => $policy], 'super');
+        [$status, $u] = $this->call('POST', '/admin/users', ['password' => 'Rahsia1234', 'name' => 'Pegawai Ujian', 'email' => $email, 'role' => 'officer', 'policy' => $policy], 'super');
         $this->assertSame(201, $status, wp_json_encode($u));
         $this->created[] = $u['id'];
         return $u['id'];

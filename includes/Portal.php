@@ -23,6 +23,8 @@ final class Portal
         add_action('login_head', [self::class, 'login_brand']);
         add_filter('login_headerurl', static fn() => home_url('/'));
         add_filter('login_headertext', static fn() => 'MyAduan · Parlimen Gombak');
+        // Staff ask the Super Admin for a new password instead of an e-mailed link.
+        add_filter('lost_password_html_link', static fn() => '<span class="myaduan-lost">Lupa kata laluan? Minta Super Admin MyAduan tetapkan kata laluan baru.</span>');
     }
 
     /** Officers log in through wp-login.php, so it shows the MyAduan logo instead of the WordPress one. */
@@ -113,11 +115,8 @@ final class Portal
         if (wp_doing_ajax() || wp_doing_cron() || !self::portal_only(wp_get_current_user())) {
             return;
         }
-        // Their own profile (password, e-mail) stays reachable.
-        if (($GLOBALS['pagenow'] ?? '') === 'profile.php') {
-            return;
-        }
-        wp_safe_redirect(Settings::portal_url());
+        // Their profile and password live in the portal too.
+        wp_safe_redirect(Settings::portal_url() . (($GLOBALS['pagenow'] ?? '') === 'profile.php' ? '#/profil' : ''));
         exit;
     }
 
@@ -177,7 +176,6 @@ final class Portal
             'api' => rest_url('myaduan/v1'),
             'nonce' => wp_create_nonce('wp_rest'),
             'logout' => html_entity_decode(wp_logout_url(wp_login_url(Settings::portal_url()))),
-            'profile' => admin_url('profile.php'),
             'home' => home_url('/'),
             'site' => get_bloginfo('name'),
             'version' => MYADUAN_VERSION,
