@@ -192,6 +192,8 @@ final class Phase5Test extends TestCase
         $keys = ['p256dh' => WebPush::b64u($ua_public), 'auth' => WebPush::b64u($auth)];
 
         $this->assertSame(422, $this->call('POST', '/admin/push', ['endpoint' => 'https://evil.example/hook', 'keys' => $keys], 'a01')[0], 'only real push services');
+        $bad = ['p256dh' => WebPush::b64u("\x04" . str_repeat("\0", 64)), 'auth' => $keys['auth']];
+        $this->assertSame(422, $this->call('POST', '/admin/push', ['endpoint' => 'https://fcm.googleapis.com/fcm/send/bad', 'keys' => $bad], 'a01')[0], 'not a point on the curve');
         $endpoint = 'https://fcm.googleapis.com/fcm/send/abc123';
         [$status, $r] = $this->call('POST', '/admin/push', ['endpoint' => $endpoint, 'keys' => $keys], 'a01');
         $this->assertSame([201, 1], [$status, $r['devices']]);
@@ -239,6 +241,20 @@ final class Phase5Test extends TestCase
         $payload = json_decode(substr($plain, 0, -1), true);
         $this->assertStringContainsString('ditugaskan kepada anda', $payload['title']);
         $this->assertStringEndsWith("#/kes/$id", $payload['url']);
+
+        // A subscription saved by another user's browser moves to whoever registers it now.
+        $this->call('POST', '/admin/push', ['endpoint' => $endpoint, 'keys' => $keys], 'a02');
+        $this->assertSame([0, 1], [$this->call('GET', '/admin/push', [], 'a01')[1]['devices'], $this->call('GET', '/admin/push', [], 'a02')[1]['devices']]);
+        $this->call('POST', '/admin/push', ['endpoint' => $endpoint, 'keys' => $keys], 'a01');
+
+        // A broken stored key does not stop delivery to the user's other devices.
+        $wpdb->insert(Schema::table('push_subscriptions'), ['user_id' => self::$users['a01'], 'endpoint_hash' => hash('sha256', 'x'), 'endpoint' => 'https://fcm.googleapis.com/fcm/send/broken',
+            'p256dh' => $bad['p256dh'], 'auth' => $keys['auth'], 'created_at' => gmdate('Y-m-d H:i:s')]);
+        $this->requests = [];
+        Notifications::add([self::$users['a01']], $id, 'UJIAN', 'Ujian rosak');
+        $this->assertSame(1, Notifications::send_pushes());
+        $this->assertSame([$endpoint], array_column($this->requests, 'url'));
+        $this->assertSame(1, $this->call('GET', '/admin/push', [], 'a01')[1]['devices'], 'the broken subscription is dropped');
 
         // A device that has gone away is forgotten.
         $this->push_status = 410;

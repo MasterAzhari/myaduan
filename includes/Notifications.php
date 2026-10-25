@@ -132,7 +132,7 @@ final class Notifications
         if (!WebPush::allowed_endpoint($endpoint)) {
             throw new WorkflowException('Perkhidmatan push peranti ini tidak disokong.');
         }
-        if (strlen(WebPush::b64u_decode($p256dh)) !== 65 || strlen(WebPush::b64u_decode($auth)) !== 16) {
+        if (!WebPush::valid_public_key(WebPush::b64u_decode($p256dh)) || strlen(WebPush::b64u_decode($auth)) !== 16) {
             throw new WorkflowException('Kunci langganan push tidak sah.');
         }
         $wpdb->query($wpdb->prepare(
@@ -189,7 +189,12 @@ final class Notifications
             ]);
             $ok = false;
             foreach ($wpdb->get_results($wpdb->prepare("SELECT * FROM $s WHERE user_id = %d", $row['user_id']), ARRAY_A) as $sub) {
-                $status = WebPush::send($sub['endpoint'], $sub['p256dh'], $sub['auth'], $payload);
+                try {
+                    $status = WebPush::send($sub['endpoint'], $sub['p256dh'], $sub['auth'], $payload);
+                } catch (\Throwable) {
+                    // Keys that cannot be used are dropped; other devices still get the push.
+                    $status = 410;
+                }
                 if ($status >= 200 && $status < 300) {
                     $ok = true;
                     $wpdb->update($s, ['last_ok_at' => Cases::now()], ['id' => $sub['id']]);

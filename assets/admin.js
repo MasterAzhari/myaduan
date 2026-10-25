@@ -175,7 +175,7 @@
           bell,
           h('span', { class: 'who-name' }, me.name, h('small', {}, ROLE[me.role])),
           h('a', { href: cfg.profile }, 'Profil'),
-          h('a', { href: cfg.logout }, 'Log keluar'))),
+          h('a', { href: cfg.logout, onclick: logout }, 'Log keluar'))),
       view);
   }
 
@@ -878,6 +878,27 @@
     return card;
   }
 
+  /** This browser's push subscription, if any. */
+  async function currentSubscription() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+    const reg = await navigator.serviceWorker.getRegistration(cfg.sw).catch(() => null);
+    return reg ? reg.pushManager.getSubscription().catch(() => null) : null;
+  }
+
+  /** A shared browser must not keep getting the previous user's notifications. */
+  async function logout(e) {
+    e.preventDefault();
+    try {
+      const sub = await Promise.race([currentSubscription(), new Promise((r) => setTimeout(() => r(null), 1500))]);
+      if (sub) {
+        await api('/admin/push', { method: 'DELETE', body: { endpoint: sub.endpoint } }).catch(() => {});
+        await sub.unsubscribe().catch(() => {});
+      }
+    } finally {
+      location.href = cfg.logout;
+    }
+  }
+
   async function enablePush() {
     if (await Notification.requestPermission() !== 'granted') throw new Error('Kebenaran notifikasi tidak diberi.');
     const reg = await navigator.serviceWorker.register(cfg.sw);
@@ -968,6 +989,8 @@
     if ('serviceWorker' in navigator && cfg.sw) {
       // Keeps the worker current; push itself is turned on from the Notifikasi page.
       navigator.serviceWorker.register(cfg.sw).catch(() => {});
+      // A subscription left in this browser belongs to whoever is signed in now.
+      currentSubscription().then((sub) => sub && api('/admin/push', { method: 'POST', body: sub.toJSON() })).catch(() => {});
       navigator.serviceWorker.addEventListener('message', (e) => {
         if (e.data?.type === 'myaduan-push') {
           refreshUnread();

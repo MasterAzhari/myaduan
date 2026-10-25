@@ -24,6 +24,17 @@ final class WebPush
         return self::b64u(self::keys()['public']);
     }
 
+    /** Whether a subscription's p256dh is a real P-256 point (ECDH with it works). */
+    public static function valid_public_key(string $raw): bool
+    {
+        if (strlen($raw) !== 65 || $raw[0] !== "\x04") {
+            return false;
+        }
+        $key = @openssl_pkey_get_public(self::pem(hex2bin(self::P256_SPKI) . $raw));
+        $probe = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]);
+        return $key !== false && @openssl_pkey_derive($key, $probe, 32) !== false;
+    }
+
     public static function allowed_endpoint(string $endpoint): bool
     {
         $parts = wp_parse_url($endpoint);
