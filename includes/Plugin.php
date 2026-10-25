@@ -24,6 +24,8 @@ final class Plugin
         Import::register();
         Home::register();
         add_filter('wp_authenticate_user', [Users::class, 'block_inactive']);
+        add_filter('allow_password_reset', [Users::class, 'no_email_reset'], 10, 2);
+        add_action('user_profile_update_errors', [Users::class, 'profile_errors'], 10, 3);
     }
 
     /** Warns site administrators about setup problems that put personal data at risk. */

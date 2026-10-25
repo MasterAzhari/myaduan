@@ -48,10 +48,10 @@ const watch = (page) => {
   page.on('console', (m) => m.type() === 'error' && !m.text().includes('status of 422') && errors.push(m.text()));
 };
 
-async function login(page, user, start) {
+async function login(page, user, start, pass = PASS) {
   await page.goto(BASE + start);
   await page.locator('#user_login').fill(user);
-  await page.locator('#user_pass').fill(PASS);
+  await page.locator('#user_pass').fill(pass);
   await page.locator('#wp-submit').click();
   await page.waitForURL(/\/adminaduan\//);
   await page.locator('main#view h1').first().waitFor();
@@ -92,14 +92,41 @@ await desk.getByRole('button', { name: '+ Tambah pengguna' }).click();
 const email = `baru${Date.now()}@myaduan.my`;
 await desk.locator('.user-form input[name=name]').fill('Cik Pegawai Jalan');
 await desk.locator('.user-form input[name=email]').fill(email);
+await desk.locator('.user-form input[name=password]').fill('Mula1234');
 await desk.locator('.user-form input[name=mode][value=selected]').check();
 await desk.locator('.user-form input[name=codes][value=A01]').check();
 await desk.screenshot({ path: `${SHOTS}/p3-tambah-pengguna.png`, fullPage: true });
 await desk.getByRole('button', { name: 'Cipta akaun' }).click();
-await desk.locator('#toast', { hasText: 'Akaun dicipta' }).waitFor();
+await desk.locator('#toast', { hasText: 'dicipta' }).waitFor();
 await desk.locator('tbody tr', { hasText: email }).waitFor();
 assert((await desk.locator('tbody tr', { hasText: email }).textContent()).includes('Jalan & Infrastruktur'), 'pengguna baru disenaraikan dengan kategorinya');
 await desk.screenshot({ path: `${SHOTS}/p4-pengguna.png`, fullPage: true });
+
+/* ---- New user logs in with the password the Super Admin set, then changes it ---- */
+{
+  const c2 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const p2 = await c2.newPage();
+  watch(p2);
+  await p2.goto(BASE + '/wp-login.php');
+  assert((await p2.locator('#nav').textContent()).includes('Minta Super Admin'), 'tiada pautan lupa kata laluan melalui e-mel');
+  await login(p2, email, '/adminaduan/', 'Mula1234');
+  await p2.locator('a', { hasText: 'Profil' }).click();
+  await p2.locator('h1', { hasText: 'Profil' }).waitFor();
+  await p2.locator('input[name=current]').fill('Mula1234');
+  await p2.locator('input[name=password]').fill('Tukar5678');
+  await p2.locator('input[name=again]').fill('Tukar5678');
+  await p2.screenshot({ path: `${SHOTS}/p4a-profil.png`, fullPage: true });
+  await p2.getByRole('button', { name: 'Tukar kata laluan' }).click();
+  await p2.locator('h2', { hasText: 'Kata laluan ditukar' }).waitFor();
+  await p2.waitForLoadState('load');
+  await p2.locator('.who-name').waitFor({ timeout: 10000 });
+  await c2.close();
+  const c3 = await browser.newContext();
+  const p3 = await c3.newPage();
+  await login(p3, email, '/adminaduan/', 'Tukar5678');
+  await p3.locator('.who-name').waitFor();
+  await c3.close();
+}
 
 /* ---- Super Admin: agencies and notifications ---- */
 await desk.locator('.nav a', { hasText: 'Agensi' }).click();

@@ -33,6 +33,9 @@ final class AdminController extends Controller
         register_rest_route(self::NS, $base . '/me', [
             'methods' => 'GET', 'callback' => [$this, 'me'], 'permission_callback' => [$this, 'can_access'],
         ]);
+        register_rest_route(self::NS, $base . '/me/password', [
+            'methods' => 'POST', 'callback' => [$this, 'change_password'], 'permission_callback' => [$this, 'can_access'],
+        ]);
         register_rest_route(self::NS, $base . '/catalog', [
             'methods' => 'GET', 'callback' => [$this, 'catalog'], 'permission_callback' => [$this, 'can_access'],
         ]);
@@ -101,10 +104,20 @@ final class AdminController extends Controller
             return [
                 'id' => $a['id'],
                 'name' => $a['name'],
+                'email' => wp_get_current_user()->user_email,
                 'role' => $a['manager'] ? 'superadmin' : ($a['work'] ? 'officer' : 'viewer'),
                 'can' => ['manage' => $a['manager'], 'work' => $a['work'], 'reports' => $a['reports']],
                 'policy' => $a['policy'],
             ];
+        });
+    }
+
+    public function change_password(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(function () use ($req) {
+            $p = $req->get_json_params() ?: $req->get_body_params();
+            $this->users_service()->change_own_password(get_current_user_id(), $p['current'] ?? '', $p['password'] ?? '');
+            return ['ok' => true];
         });
     }
 
