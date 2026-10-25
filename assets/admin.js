@@ -21,14 +21,19 @@
   const EVENT = {
     CIPTA: 'Aduan diterima', IMPORT: 'Diimport dari Google Sheet lama', CLASSIFY: 'Dikelaskan', ASSIGN: 'Ditugaskan', ACCEPT: 'Tugasan diterima', ACTION: 'Tindakan direkod',
     COMMENT: 'Catatan dalaman', REQUEST_CLOSE: 'Mohon penutupan', APPROVE_CLOSE: 'Disahkan & ditutup', RETURN: 'Dikembalikan untuk tindakan',
-    REOPEN: 'Dibuka semula', PUBLISH: 'Mesej awam dikemas kini',
+    REOPEN: 'Dibuka semula', PUBLISH: 'Mesej awam dikemas kini', REFER: 'Dipanjangkan ke agensi', SELF: 'Tindakan sendiri',
+    NEED_INFO: 'Perlu maklumat lanjut', AGENCY_UPDATE: 'Status agensi dikemas kini',
   };
   const FIELD = {
     title: 'Tajuk', category_code: 'Kategori', dun_slug: 'DUN', area_id: 'Taman/kampung', priority: 'Keutamaan', owner_id: 'Pegawai',
     next_action: 'Tindakan seterusnya', followup_at: 'Tarikh susulan', closure_reason: 'Sebab penutupan', resolution: 'Penyelesaian',
-    public_draft: 'Draf mesej awam', public_message: 'Mesej awam', gambar: 'Gambar',
+    public_draft: 'Draf mesej awam', public_message: 'Mesej awam', gambar: 'Gambar', track: 'Keputusan', agencies: 'Agensi',
+    agency: 'Agensi', agency_status: 'Status agensi', agency_reference: 'No. rujukan agensi',
   };
-  const FLAGS = { open: 'Masih terbuka', not_accepted: 'Belum diterima pegawai', overdue: 'Lewat tarikh susulan' };
+  const FLAGS = {
+    open: 'Masih terbuka', not_accepted: 'Belum diterima pegawai', overdue: 'Lewat tarikh susulan',
+    agency: 'Dipanjangkan ke agensi', need_info: 'Perlu maklumat lanjut',
+  };
 
   /* ---------- helpers ---------- */
 
@@ -74,6 +79,9 @@
   const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z]+/g, '-');
 
   function statusBadge(status) { return h('span', { class: 'badge st-' + slug(status) }, status); }
+  function trackBadge(track, status) {
+    return track && status !== 'DITUTUP' ? h('span', { class: 'badge tr-' + slug(track) }, state.catalog.tracks[track] || track) : null;
+  }
   function priorityBadge(p) { return p && p !== 'BIASA' ? h('span', { class: 'badge pr-' + slug(p) }, p) : null; }
   function catName(code) { return code ? (state.cats.get(code)?.name || code) : null; }
   function dunName(s) { return s ? (state.duns.get(s)?.name || s) : null; }
@@ -143,18 +151,28 @@
   }
 
   let view;
+  let bell;
   function shell() {
     const me = state.me;
     const links = [];
     if (me.can.work || me.can.manage) links.push(['#/kes', 'Senarai kes', 'kes']);
     else links.push(['#/ringkasan', 'Ringkasan', 'ringkasan']);
-    if (me.can.manage) links.push(['#/pengguna', 'Pengguna', 'pengguna']);
+    if (me.can.manage) links.push(['#/agensi', 'Agensi', 'agensi'], ['#/pengguna', 'Pengguna', 'pengguna']);
     view = h('main', { id: 'view', tabindex: '-1' });
+    const NS = 'http://www.w3.org/2000/svg';
+    const icon = document.createElementNS(NS, 'svg');
+    const path = document.createElementNS(NS, 'path');
+    for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', width: '22', height: '22', 'aria-hidden': 'true' })) icon.setAttribute(k, v);
+    path.setAttribute('fill', 'currentColor');
+    path.setAttribute('d', 'M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z');
+    icon.append(path);
+    bell = h('a', { class: 'bell', href: '#/notifikasi', 'data-key': 'notifikasi', 'aria-label': 'Notifikasi' }, icon, h('span', { class: 'count', hidden: true }));
     app.replaceChildren(
       h('header', { class: 'top' },
         h('a', { class: 'brand', href: '#/' }, cfg.logo ? h('img', { class: 'logo-img', src: cfg.logo, alt: '', width: '38', height: '38' }) : h('span', { class: 'logo', 'aria-hidden': 'true' }, 'MA'), h('span', {}, 'MyAduan', h('small', {}, 'Portal Admin'))),
         h('nav', { class: 'nav', 'aria-label': 'Menu utama' }, links.map(([href, label, key]) => h('a', { href, 'data-key': key }, label))),
         h('div', { class: 'who' },
+          bell,
           h('span', { class: 'who-name' }, me.name, h('small', {}, ROLE[me.role])),
           h('a', { href: cfg.profile }, 'Profil'),
           h('a', { href: cfg.logout }, 'Log keluar'))),
@@ -164,11 +182,13 @@
   async function route() {
     const { parts, query } = parseHash();
     const key = parts[0] || '';
-    for (const a of app.querySelectorAll('.nav a')) a.classList.toggle('active', a.dataset.key === key);
+    for (const a of app.querySelectorAll('.nav a, a.bell')) a.classList.toggle('active', a.dataset.key === key);
     const canCases = state.me.can.work || state.me.can.manage;
     try {
       if (key === 'kes' && parts[1] && canCases) await caseView(parseInt(parts[1], 10));
       else if (key === 'pengguna' && state.me.can.manage) await usersView();
+      else if (key === 'agensi' && state.me.can.manage) await agenciesView();
+      else if (key === 'notifikasi') await notificationsView();
       else if (canCases) { state.lastList = location.hash || '#/kes'; await listView(query); }
       else await summaryView();
     } catch (e) {
@@ -286,7 +306,7 @@
       h('td', { 'data-label': 'Rujukan' }, h('a', { class: 'ref', href: '#/kes/' + c.id }, c.reference), h('small', {}, formatDate(c.created_at))),
       h('td', { 'data-label': 'Aduan', class: 'main-col' }, h('span', { class: 'title' }, c.title), h('small', {}, c.location)),
       h('td', { 'data-label': 'Kategori' }, catName(c.category_code) || h('em', { class: 'muted' }, 'Belum dikelaskan'), h('small', {}, dunName(c.dun_slug) || '')),
-      h('td', { 'data-label': 'Status' }, statusBadge(c.status), ' ', priorityBadge(c.priority),
+      h('td', { 'data-label': 'Status' }, statusBadge(c.status), ' ', priorityBadge(c.priority), ' ', trackBadge(c.track, c.status),
         c.owner_id && !c.accepted && c.status !== 'DITUTUP' ? h('small', { class: 'warn-text' }, 'Belum diterima') : null),
       h('td', { 'data-label': 'Pegawai' }, c.owner_name || h('em', { class: 'muted' }, 'Belum ditugaskan'),
         c.followup_at ? h('small', { class: new Date(c.followup_at) < new Date() && c.status !== 'DITUTUP' ? 'bad-text' : '' }, 'Susulan ' + formatDate(c.followup_at, false)) : null)));
@@ -360,6 +380,7 @@
           ['DUN', dunName(c.dun_slug) || h('em', { class: 'muted' }, 'Belum ditetapkan')],
           ['Taman/kampung', c.area_id ? state.areas.get(c.area_id) || '#' + c.area_id : null],
           ['Pegawai', c.owner_name ? `${c.owner_name}${c.accepted_at ? ' (diterima ' + formatDate(c.accepted_at) + ')' : ' (belum diterima)'}` : h('em', { class: 'muted' }, 'Belum ditugaskan')],
+          ['Keputusan', c.track ? state.catalog.tracks[c.track] : null],
           ['Tindakan seterusnya', c.next_action],
           ['Tarikh susulan', c.followup_at ? formatDate(c.followup_at) : null],
           ['Tindakan terakhir', c.last_action_at ? formatDate(c.last_action_at) : null],
@@ -370,6 +391,12 @@
           ['Dibuka semula', c.reopen_count ? c.reopen_count + ' kali' : null],
           ['Ditutup', c.closed_at ? formatDate(c.closed_at) : null],
         ])),
+      c.referrals.length ? h('section', { class: 'card' },
+        h('h2', {}, 'Dipanjangkan ke agensi'),
+        h('ul', { class: 'referrals' }, c.referrals.map((r) => h('li', {},
+          h('div', {}, h('strong', {}, r.agency_name), ' ', h('span', { class: 'badge ag-' + slug(r.status) }, r.status)),
+          h('small', { class: 'muted' }, `Dihantar ${formatDate(r.created_at)}` + (r.agency_email ? ' ke ' + r.agency_email : '')
+            + (r.reference_no ? ` · Rujukan agensi: ${r.reference_no}` : '') + (r.updated_at !== r.created_at ? ` · Dikemas kini ${formatDate(r.updated_at)}` : '')))))) : null,
       h('section', { class: 'card' },
         h('h2', {}, 'Sejarah'),
         h('ol', { class: 'timeline' }, c.events.map(eventItem))));
@@ -380,7 +407,7 @@
       h('a', { class: 'back', href: state.lastList }, '‹ Senarai kes'),
       h('div', { class: 'case-head' },
         h('div', {}, h('code', { class: 'ref' }, c.reference), h('h1', {}, c.title)),
-        h('div', { class: 'badges' }, statusBadge(c.status), priorityBadge(c.priority))),
+        h('div', { class: 'badges' }, statusBadge(c.status), priorityBadge(c.priority), trackBadge(c.track, c.status))),
       h('div', { class: 'case-grid' }, main, side));
   }
 
@@ -392,6 +419,7 @@
       case 'area_id': return state.areas.get(Number(v)) || '#' + v;
       case 'owner_id': return Number(v) ? officerName(Number(v)) : '(tiada)';
       case 'followup_at': return formatDate(String(v).replace(' ', 'T') + 'Z');
+      case 'track': return state.catalog.tracks[v] || v;
       default: return String(v);
     }
   }
@@ -422,8 +450,12 @@
 
     if (ops.includes('classify') || ops.includes('assign')) add('screen', ops.includes('classify') ? 'Kelaskan / tugaskan' : 'Tugaskan semula', screenForm, !c.owner_id);
     if (ops.includes('accept')) add('accept', 'Terima tugasan', acceptForm, true);
-    if (ops.includes('action')) add('action', 'Rekod tindakan', actionForm, true);
-    if (ops.includes('request_close')) add('request_close', 'Mohon penutupan', closeRequestForm);
+    if (ops.includes('refer')) add('refer', 'Panjangkan ke agensi', referForm, true);
+    if (ops.includes('self')) add('self', 'Tindakan sendiri', selfForm);
+    if (ops.includes('need_info')) add('need_info', 'Perlu maklumat lanjut', needInfoForm);
+    if (ops.includes('agency_update')) add('agency_update', 'Status agensi', agencyUpdateForm);
+    if (ops.includes('action')) add('action', 'Rekod tindakan', actionForm);
+    if (ops.includes('request_close')) add('request_close', 'Tutup kes', closeRequestForm);
     if (ops.includes('approve_close')) add('approve_close', 'Sahkan & tutup', approveForm, true);
     if (ops.includes('return')) add('return', 'Kembalikan', (x) => noteForm(x, 'return', 'Kembalikan untuk tindakan', 'Sebab dikembalikan dan apa yang perlu dibuat'));
     if (ops.includes('reopen')) add('reopen', 'Buka semula', (x) => noteForm(x, 'reopen', 'Buka semula', 'Sebab kes dibuka semula'));
@@ -484,6 +516,77 @@
       field('Tindakan seterusnya', h('input', { name: 'next_action', value: c.next_action || '', maxlength: 500 })),
       field('Tarikh susulan', h('input', { name: 'followup_at', type: 'datetime-local', value: toLocalInput(c.followup_at) }), { help: 'Kosongkan jika tiada susulan.' }),
     ], 'Simpan tindakan', (f) => ({ op: 'action', fields: { note: val(f, 'note'), next_action: val(f, 'next_action'), followup_at: val(f, 'followup_at') } }));
+  }
+
+  /** Follow-up fields shared by the decision forms. */
+  function followupFields(c) {
+    return [
+      field('Tindakan seterusnya (pilihan)', h('input', { name: 'next_action', value: c.next_action || '', maxlength: 500 })),
+      field('Tarikh susulan (pilihan)', h('input', { name: 'followup_at', type: 'datetime-local', value: toLocalInput(c.followup_at) }), { help: 'Anda akan nampak kes ini dalam "Lewat tarikh susulan" selepas tarikh ini.' }),
+    ];
+  }
+  const followupValues = (f) => ({ next_action: val(f, 'next_action'), followup_at: val(f, 'followup_at') });
+
+  function referForm(c) {
+    const already = new Set(c.referrals.map((r) => r.agency_id));
+    const search = h('input', { type: 'search', placeholder: 'Cari agensi (contoh: MPS, JKR, polis)', 'aria-label': 'Cari agensi' });
+    const count = h('small', { class: 'muted' });
+    const items = state.catalog.agencies.map((a) => h('label', { class: 'check agency', 'data-name': a.name.toLowerCase() },
+      h('input', { type: 'checkbox', name: 'agency_ids', value: String(a.id) }), a.name,
+      already.has(a.id) ? h('small', { class: 'muted' }, ' (sudah dipanjangkan)') : null));
+    const list = h('div', { class: 'agency-pick' }, items);
+    const sync = () => {
+      const q = search.value.trim().toLowerCase();
+      for (const el of items) el.hidden = q !== '' && !el.dataset.name.includes(q) && !el.querySelector('input').checked;
+      const n = list.querySelectorAll('input:checked').length;
+      count.textContent = n ? `${n} agensi dipilih` : 'Pilih satu atau lebih agensi.';
+    };
+    search.addEventListener('input', sync);
+    list.addEventListener('change', sync);
+    sync();
+    return opForm(c, [
+      h('div', { class: 'field wide', 'data-field': 'agency_ids' }, h('label', {}, 'Agensi'), search, list, count, h('small', { class: 'err' })),
+      field('Mesej kepada agensi', textarea('note', 'Mohon pihak tuan/puan mengambil tindakan sewajarnya ke atas aduan ini dan memaklumkan status tindakan kepada kami.', { rows: 3 }),
+        { help: 'Dihantar dari ' + 'info@' + cfg.staff_domain + ' bersama butiran aduan, lokasi dan gambar. Maklumat pengadu (nama, IC, telefon, e-mel) tidak dihantar.' }),
+      ...followupFields(c),
+    ], 'Hantar ke agensi', (f) => ({ op: 'refer', fields: Object.assign({
+      agency_ids: [...f.querySelectorAll('input[name=agency_ids]:checked')].map((x) => Number(x.value)), note: val(f, 'note'),
+    }, followupValues(f)) }));
+  }
+
+  function selfForm(c) {
+    return opForm(c, [
+      h('p', {}, 'Kes ini akan diuruskan sendiri oleh pegawai kes tanpa dipanjangkan ke agensi.'),
+      field('Rancangan tindakan (pilihan)', textarea('note', '', { rows: 3 })),
+      ...followupFields(c),
+    ], 'Simpan keputusan', (f) => ({ op: 'self', fields: Object.assign({ note: val(f, 'note') }, followupValues(f)) }));
+  }
+
+  function needInfoForm(c) {
+    return opForm(c, [
+      h('p', {}, 'Kes kekal terbuka dan ditanda "Perlu maklumat lanjut" sehingga maklumat diperoleh.'),
+      field('Maklumat yang diperlukan', textarea('note', '', { rows: 3 }), { help: 'Contoh: Lokasi tepat dan gambar terkini. Hubungi pengadu jika perlu (sekurang-kurangnya 10 aksara).' }),
+      ...followupFields(c),
+    ], 'Simpan keputusan', (f) => ({ op: 'need_info', fields: Object.assign({ note: val(f, 'note') }, followupValues(f)) }));
+  }
+
+  function agencyUpdateForm(c) {
+    const ref = select('referral_id', c.referrals.map((r) => ({ value: r.id, label: `${r.agency_name} (${r.status})` })), c.referrals[0]?.id);
+    const status = select('agency_status', state.catalog.agency_statuses.map((x) => ({ value: x, label: x })), c.referrals[0]?.status);
+    const refNo = h('input', { name: 'reference_no', maxlength: 100, value: c.referrals[0]?.reference_no || '' });
+    ref.addEventListener('change', () => {
+      const r = c.referrals.find((x) => String(x.id) === ref.value);
+      status.value = r?.status || status.value;
+      refNo.value = r?.reference_no || '';
+    });
+    return opForm(c, [
+      field('Agensi', ref),
+      field('Status agensi', status),
+      field('No. rujukan agensi (pilihan)', refNo),
+      field('Catatan (pilihan)', textarea('note', '', { rows: 2 }), { help: 'Contoh: maklum balas yang diterima daripada agensi.' }),
+    ], 'Simpan status', (f) => ({ op: 'agency_update', fields: {
+      referral_id: Number(ref.value), agency_status: status.value, reference_no: refNo.value, note: val(f, 'note'),
+    } }));
   }
 
   function closeRequestForm(c) {
@@ -685,6 +788,166 @@
     return form;
   }
 
+  /* ---------- notifications ---------- */
+
+  function setUnread(n) {
+    const el = bell?.querySelector('.count');
+    if (!el) return;
+    el.hidden = !n;
+    el.textContent = n > 99 ? '99+' : String(n);
+    bell.setAttribute('aria-label', n ? `Notifikasi (${n} belum dibaca)` : 'Notifikasi');
+    if ('setAppBadge' in navigator) (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+  }
+  async function refreshUnread() {
+    try { setUnread((await api('/admin/notifications', { params: { count: 1 } })).unread); } catch { /* offline: try again later */ }
+  }
+
+  async function notificationsView() {
+    view.replaceChildren(h('p', { class: 'loading' }, 'Memuatkan notifikasi…'));
+    const data = await api('/admin/notifications');
+    setUnread(data.unread);
+    const open = async (n) => {
+      if (!n.read) setUnread((await api('/admin/notifications/read', { method: 'POST', body: { ids: [n.id] } })).unread);
+      location.hash = n.case_id ? '#/kes/' + n.case_id : '#/notifikasi';
+    };
+    const items = data.items.map((n) => h('li', { class: n.read ? '' : 'unread' },
+      h('button', { type: 'button', class: 'notif', onclick: () => open(n) },
+        h('strong', {}, n.title), n.body ? h('span', {}, n.body) : null, h('small', { class: 'muted' }, formatDate(n.created_at)))));
+    view.replaceChildren(
+      h('div', { class: 'page-head' }, h('h1', {}, 'Notifikasi'),
+        data.unread ? h('button', { class: 'btn ghost', type: 'button', onclick: async () => {
+          setUnread((await api('/admin/notifications/read', { method: 'POST', body: {} })).unread);
+          notificationsView();
+        } }, 'Tandakan semua dibaca') : null),
+      await deviceCard(),
+      items.length ? h('ul', { class: 'card notif-list' }, items) : h('div', { class: 'card empty' }, 'Tiada notifikasi lagi.'));
+  }
+
+  const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let installPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installPrompt = e; });
+
+  /** Turns on push for this device, and helps install the portal as an app. */
+  async function deviceCard() {
+    const card = h('section', { class: 'card device' }, h('h2', {}, 'Notifikasi di peranti ini'));
+    const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    const reg = supported ? await navigator.serviceWorker.getRegistration(cfg.sw).catch(() => null) : null;
+    const sub = reg ? await reg.pushManager.getSubscription().catch(() => null) : null;
+    const line = (text, cls) => h('p', { class: cls || '' }, text);
+
+    if (!standalone()) {
+      if (installPrompt) {
+        card.append(line('Pasang portal ini sebagai aplikasi di telefon untuk buka terus dari skrin utama.'),
+          h('button', { class: 'btn ghost', type: 'button', onclick: async () => { installPrompt.prompt(); await installPrompt.userChoice; installPrompt = null; notificationsView(); } }, 'Pasang aplikasi'));
+      } else if (isIos()) {
+        card.append(line('iPhone/iPad: tekan butang Kongsi (petak dengan anak panah ke atas) di Safari, pilih "Add to Home Screen", kemudian buka MyAduan dari skrin utama untuk aktifkan notifikasi.', 'help-box'));
+      } else {
+        card.append(line('Untuk pasang di telefon: buka menu pelayar (⋮) dan pilih "Install app" atau "Add to Home screen".', 'muted small'));
+      }
+    }
+    if (!supported) {
+      if (!isIos() || standalone()) card.append(line('Pelayar ini tidak menyokong notifikasi push. Notifikasi tetap dipaparkan di loceng dalam portal.', 'muted'));
+      return card;
+    }
+    if (Notification.permission === 'denied') {
+      card.append(line('Notifikasi disekat untuk laman ini. Benarkan notifikasi dalam tetapan pelayar/telefon, kemudian muat semula.', 'warn-text'));
+      return card;
+    }
+    if (sub) {
+      card.append(line('Notifikasi push aktif di peranti ini.', 'ok-text'),
+        h('button', { class: 'btn ghost small', type: 'button', onclick: async () => {
+          await api('/admin/push', { method: 'DELETE', body: { endpoint: sub.endpoint } }).catch(() => {});
+          await sub.unsubscribe();
+          toast('Notifikasi push dimatikan untuk peranti ini.');
+          notificationsView();
+        } }, 'Matikan di peranti ini'));
+    } else {
+      card.append(line('Aktifkan untuk terima notifikasi di telefon/komputer walaupun portal tidak dibuka.'),
+        h('button', { class: 'btn', type: 'button', onclick: async (e) => {
+          e.currentTarget.disabled = true;
+          try {
+            await enablePush();
+            toast('Notifikasi push diaktifkan.');
+          } catch (err) {
+            toast(err.message || 'Tidak dapat aktifkan notifikasi.', 'bad');
+          }
+          notificationsView();
+        } }, 'Aktifkan notifikasi'));
+    }
+    return card;
+  }
+
+  async function enablePush() {
+    if (await Notification.requestPermission() !== 'granted') throw new Error('Kebenaran notifikasi tidak diberi.');
+    const reg = await navigator.serviceWorker.register(cfg.sw);
+    await navigator.serviceWorker.ready;
+    const { public_key: key } = await api('/admin/push');
+    const raw = atob(key.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (key.length % 4)) % 4));
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Uint8Array.from(raw, (ch) => ch.charCodeAt(0)) });
+    await api('/admin/push', { method: 'POST', body: sub.toJSON() });
+  }
+
+  /* ---------- agencies ---------- */
+
+  async function agenciesView() {
+    view.replaceChildren(h('p', { class: 'loading' }, 'Memuatkan agensi…'));
+    const list = await api('/admin/agencies');
+    const panel = h('div', { class: 'user-panel' });
+    const open = (a) => {
+      panel.replaceChildren(agencyForm(a, panel));
+      panel.scrollIntoView({ block: 'start' });
+      panel.querySelector('input')?.focus();
+    };
+    const filter = h('input', { type: 'search', placeholder: 'Cari agensi atau e-mel', 'aria-label': 'Cari agensi' });
+    const rows = list.map((a) => h('tr', { class: a.active ? '' : 'inactive', 'data-q': (a.name + ' ' + a.email + ' ' + a.officer).toLowerCase() },
+      h('td', { 'data-label': 'Agensi', class: 'main-col' }, h('span', { class: 'title' }, a.name), a.officer ? h('small', {}, a.officer) : null),
+      h('td', { 'data-label': 'E-mel' }, a.email, a.cc.length ? h('small', {}, 'CC: ' + a.cc.join(', ')) : null),
+      h('td', { 'data-label': 'Status' }, h('span', { class: 'badge ' + (a.active ? 'st-ok' : 'st-off') }, a.active ? 'Aktif' : 'Tidak aktif')),
+      h('td', { 'data-label': '' }, h('button', { class: 'btn ghost small', type: 'button', onclick: () => open(a) }, 'Ubah'))));
+    filter.addEventListener('input', () => {
+      const q = filter.value.trim().toLowerCase();
+      for (const r of rows) r.hidden = q !== '' && !r.dataset.q.includes(q);
+    });
+    view.replaceChildren(
+      h('div', { class: 'page-head' }, h('h1', {}, 'Agensi'), h('button', { class: 'btn', type: 'button', onclick: () => open(null) }, '+ Tambah agensi')),
+      h('p', { class: 'muted small' }, `Kes boleh dipanjangkan kepada agensi aktif. E-mel dihantar ke e-mel utama dengan salinan (CC) kepada alamat tambahan. ${list.length} agensi.`),
+      panel,
+      h('div', { class: 'card' }, filter),
+      h('div', { class: 'card table-wrap' }, h('table', { class: 'users' },
+        h('thead', {}, h('tr', {}, ['Agensi', 'E-mel', 'Status', ''].map((t) => h('th', { scope: 'col' }, t)))),
+        h('tbody', {}, rows))));
+  }
+
+  function agencyForm(a, panel) {
+    const isNew = !a;
+    const form = h('form', { class: 'card user-form', novalidate: true, onsubmit: async (e) => {
+      e.preventDefault();
+      showErrors(form);
+      const body = { name: form.elements.name.value, officer: form.elements.officer.value, email: form.elements.email.value, cc: form.elements.cc.value, active: form.elements.active.checked };
+      await submitting(form, async () => {
+        try {
+          await api(isNew ? '/admin/agencies' : '/admin/agencies/' + a.id, { method: 'POST', body });
+          toast(isNew ? 'Agensi ditambah.' : 'Perubahan disimpan.');
+          await loadCatalog();
+          await agenciesView();
+        } catch (err) { showErrors(form, err); }
+      });
+    } },
+      h('h2', {}, isNew ? 'Tambah agensi' : 'Ubah ' + a.name),
+      field('Nama agensi', h('input', { name: 'name', value: a?.name || '', maxlength: 150, required: true }), { wide: true }),
+      field('Pegawai / jawatan', h('input', { name: 'officer', value: a?.officer || '', maxlength: 200 }), { help: 'Dipaparkan pada baris "Kepada" dalam e-mel.' }),
+      h('div', { class: 'two' },
+        field('E-mel utama', h('input', { name: 'email', type: 'email', value: a?.email || '', required: true })),
+        field('E-mel tambahan (CC)', h('input', { name: 'cc', value: (a?.cc || []).join(', ') }), { help: 'Pisahkan dengan koma.' })),
+      h('label', { class: 'check field wide' }, h('input', { type: 'checkbox', name: 'active', checked: isNew || a.active }), 'Aktif (boleh dipilih bila panjangkan kes)'),
+      h('p', { class: 'form-error', role: 'alert' }),
+      h('div', { class: 'form-actions' },
+        h('button', { class: 'btn', type: 'submit' }, isNew ? 'Tambah agensi' : 'Simpan'),
+        h('button', { class: 'btn ghost', type: 'button', onclick: () => panel.replaceChildren() }, 'Batal')));
+    return form;
+  }
+
   /* ---------- boot ---------- */
 
   async function boot() {
@@ -699,6 +962,19 @@
     shell();
     window.addEventListener('hashchange', route);
     await route();
+    refreshUnread();
+    setInterval(() => { if (document.visibilityState === 'visible') refreshUnread(); }, 60000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshUnread(); });
+    if ('serviceWorker' in navigator && cfg.sw) {
+      // Keeps the worker current; push itself is turned on from the Notifikasi page.
+      navigator.serviceWorker.register(cfg.sw).catch(() => {});
+      navigator.serviceWorker.addEventListener('message', (e) => {
+        if (e.data?.type === 'myaduan-push') {
+          refreshUnread();
+          if (parseHash().parts[0] === 'notifikasi') notificationsView();
+        }
+      });
+    }
   }
 
   boot();

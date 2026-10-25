@@ -19,6 +19,7 @@ final class Settings
         'portal_path' => 'adminaduan',
         'emergency_text' => 'Untuk kecemasan yang mengancam nyawa, hubungi 999 (polis/ambulans) atau 994 (bomba) dahulu.',
         'home_enabled' => '',
+        'staff_email' => '',
         'form_path' => 'aduan',
         'track_path' => 'semak',
         'home_logo_url' => '',
@@ -129,6 +130,7 @@ final class Settings
             'portal_path' => sanitize_title((string) ($in['portal_path'] ?? self::DEFAULTS['portal_path'])) ?: self::DEFAULTS['portal_path'],
             'emergency_text' => sanitize_text_field((string) ($in['emergency_text'] ?? self::DEFAULTS['emergency_text'])),
             'home_enabled' => empty($in['home_enabled']) ? '' : '1',
+            'staff_email' => empty($in['staff_email']) ? '' : '1',
             'form_path' => sanitize_title((string) ($in['form_path'] ?? self::DEFAULTS['form_path'])) ?: self::DEFAULTS['form_path'],
             'track_path' => sanitize_title((string) ($in['track_path'] ?? self::DEFAULTS['track_path'])) ?: self::DEFAULTS['track_path'],
             'home_logo_url' => esc_url_raw((string) ($in['home_logo_url'] ?? '')),
@@ -153,6 +155,10 @@ final class Settings
                 esc_attr($key), esc_html($label), esc_attr($name), esc_attr(self::get($key)), esc_attr($type), esc_html($help)
             );
         };
+        printf(
+            '<tr><th scope="row">E-mel notifikasi staf</th><td><label><input type="checkbox" name="%1$s[staff_email]" value="1"%2$s> Hantar juga notifikasi staf ke e-mel</label><p class="description">Semua notifikasi staf sentiasa ada dalam portal (loceng) dan sebagai notifikasi push di telefon. Tandakan ini hanya jika staf mahu salinan melalui e-mel juga. E-mel kepada pengadu dan agensi tetap dihantar.</p></td></tr>',
+            esc_attr($name), checked(self::get('staff_email'), '1', false)
+        );
         $row('notify_emails', 'E-mel notifikasi aduan baru', 'Mesti @' . self::staff_domain() . '. Pisahkan dengan koma. Kosong = semua Super Admin MyAduan.');
         $row('mail_from', 'E-mel penghantar', 'Semua e-mel MyAduan (termasuk pengesahan kepada pengadu) dihantar dari alamat ini. Mesti @' . self::staff_domain() . ' dan wujud sebagai mailbox di Hostinger.', 'email');
         $row('mail_from_name', 'Nama penghantar', 'Nama yang dilihat penerima.');

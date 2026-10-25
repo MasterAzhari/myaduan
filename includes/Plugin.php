@@ -18,6 +18,7 @@ final class Plugin
         add_action('admin_notices', [self::class, 'health_notice']);
         Settings::register();
         Mailer::register();
+        Notifications::register();
         Frontend::register();
         Portal::register();
         Import::register();

@@ -42,6 +42,7 @@ final class Installer
         }
         self::check_engine();
         Catalog::seed();
+        Agencies::seed();
         self::roles();
         Storage::ensure_root();
         Keys::ensure();

@@ -16,7 +16,7 @@ final class Phase2Test extends TestCase
         $wpdb->query('TRUNCATE TABLE ' . Schema::table('mail_queue'));
         add_filter('myaduan_stream_files', '__return_false');
         add_filter('pre_wp_mail', [$this, 'capture'], 10, 2);
-        update_option('myaduan_settings', ['notify_emails' => 'urusetia@myaduan.my']);
+        update_option('myaduan_settings', ['notify_emails' => 'urusetia@myaduan.my', 'staff_email' => '1']);
     }
 
     protected function tearDown(): void

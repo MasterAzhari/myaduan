@@ -41,13 +41,11 @@ Status: **Fasa 3**. Ada database, peranan, aliran status, REST API, borang awam,
 
 ### E-mel
 
-Dihantar melalui `wp_mail` dari queue `wp_myaduan_mail_queue`, setiap 5 minit, cuba 3 kali. Semua e-mel MyAduan dihantar **dari `info@myaduan.my`** (Tetapan → MyAduan → E-mel penghantar, mesti @myaduan.my). E-mel kepada staf tak mengandungi nama, IC atau telefon pengadu, cuma rujukan dan link portal.
+Dihantar melalui `wp_mail` dari queue `wp_myaduan_mail_queue`, setiap 5 minit, cuba 3 kali. Semua e-mel MyAduan dihantar **dari `info@myaduan.my`** (Tetapan → MyAduan → E-mel penghantar, mesti @myaduan.my).
 
-- Aduan baru → e-mel notifikasi (atau semua Super Admin)
 - Aduan baru → **pengadu**, jika dia isi e-mel (pilihan) dalam borang: nombor rujukan + link semak status. E-mel pengadu disimpan bersulit; alamat dalam queue dipadam lepas dihantar.
-- Kes ditugaskan → pegawai berkenaan
-- Mohon penutupan → e-mel notifikasi
-- Dikembalikan untuk tindakan → pegawai berkenaan
+- Kes dipanjangkan → **agensi** (e-mel utama + CC): butiran aduan, lokasi, peta dan gambar (dilampirkan). **Tiada maklumat pengadu** (nama, IC, telefon, e-mel). Balasan agensi masuk ke `info@myaduan.my`.
+- Notifikasi staf kini dalam portal (lihat di bawah). Salinan e-mel kepada staf hanya jika "E-mel notifikasi staf" ditanda dalam Tetapan (asal: tutup). E-mel staf tak mengandungi maklumat pengadu.
 
 Pada Hostinger, cipta mailbox `info@myaduan.my` dan pasang plugin SMTP (contoh WP Mail SMTP) guna mailbox itu supaya e-mel tak masuk spam.
 
@@ -96,6 +94,10 @@ define('MYADUAN_STORAGE_DIR', '/home/uXXXX/myaduan-files'); // kalau nak tukar l
 - **Butiran kes**: butiran, gambar, pengadu (telefon + WhatsApp), maklumat kes, sejarah lengkap, dan butang tindakan ikut peranan dan status.
 - **Pengguna** (Super Admin): cipta akaun (e-mel tetapan kata laluan dihantar sendiri), tukar peranan dan kategori, nyahaktif. Tak boleh nyahaktif atau buang kategori pegawai yang masih pegang kes terbuka. Akaun Administrator WordPress diurus dalam WordPress.
 - Sesuai untuk telefon; pegawai di lapangan boleh terima tugasan dan rekod tindakan dari telefon.
+- **Keputusan kes** (pegawai kes atau Super Admin): *Panjangkan ke agensi* (pilih agensi, e-mel dihantar), *Tindakan sendiri*, *Perlu maklumat lanjut*, atau *Tutup kes* (mohon penutupan → Super Admin sahkan). Super Admin yang buat keputusan atas kes yang belum ditugaskan terus jadi pegawai kes. *Status agensi* rekod maklum balas dan no. rujukan agensi.
+- **Agensi** (Super Admin): 40 agensi dari senarai rasmi dimasukkan semasa pasang. Tambah, ubah e-mel/CC, atau nyahaktif.
+- **Notifikasi** (loceng): aduan baru, tugasan, mohon penutupan, dikembalikan, dibuka semula, ditutup, dipanjangkan, catatan. Buka kes = notifikasi kes itu dibaca.
+- **Pasang di telefon (PWA)**: portal boleh "Add to Home Screen" / "Install app". Di halaman Notifikasi tekan **Aktifkan notifikasi** untuk notifikasi push di peranti itu. iPhone perlu iOS 16.4+ dan mesti dibuka dari ikon skrin utama dulu. Push dihantar terus dari server (VAPID, tiada perkhidmatan luar), kunci dibuat sendiri semasa pertama kali digunakan.
 
 ## Peranan
 
@@ -126,12 +128,18 @@ Operasi: `classify`, `assign`, `accept`, `action`, `comment`, `request_close`, `
 | GET | `/admin/me` | Pengguna MyAduan |
 | GET | `/admin/catalog` | Pengguna MyAduan (senarai pegawai untuk Super Admin) |
 | GET | `/admin/stats` | Pengguna MyAduan |
-| GET | `/admin/cases` | Super Admin, Pegawai. Filter: `status`, `flag` (`open`, `not_accepted`, `overdue`), `owner` (id atau `unassigned`), `category` (`none` = belum dikelaskan), `dun`, `area`, `q`, `ic`, `from`, `to`, `page` |
+| GET | `/admin/cases` | Super Admin, Pegawai. Filter: `status`, `flag` (`open`, `not_accepted`, `overdue`, `agency`, `need_info`), `owner` (id atau `unassigned`), `category` (`none` = belum dikelaskan), `dun`, `area`, `q`, `ic`, `from`, `to`, `page` |
 | GET | `/admin/cases/{id}` | Super Admin, Pegawai (dicatat dalam `access_log`) |
 | GET | `/admin/files/{id}` | Super Admin, Pegawai yang ada akses kes (dicatat dalam `access_log`) |
 | POST | `/admin/cases/{id}/operations` | `op`, `version`, `request_id` (64 hex) + medan operasi |
 | GET, POST | `/admin/users` | Super Admin. POST: `name`, `email`, `role` (`superadmin`/`officer`/`viewer`), `policy` untuk pegawai |
 | POST | `/admin/users/{id}` | Super Admin. Mana-mana medan di atas + `active` |
+| GET, POST | `/admin/agencies`, POST `/admin/agencies/{id}` | Super Admin. `name`, `officer`, `email`, `cc`, `active` |
+| GET | `/admin/notifications` | Pengguna MyAduan. `unread=1`, `count=1` |
+| POST | `/admin/notifications/read` | `ids` (kosong = semua) |
+| GET, POST, DELETE | `/admin/push` | Kunci awam VAPID; simpan/buang langganan push peranti |
+
+Operasi keputusan: `refer` (`agency_ids`, `note` = mesej kepada agensi), `self`, `need_info` (`note`), `agency_update` (`referral_id`, `agency_status`, `reference_no`); semua boleh tambah `next_action`, `followup_at`.
 
 Panggilan admin guna cookie login + header `X-WP-Nonce` (`wp_create_nonce('wp_rest')`).
 
