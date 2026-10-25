@@ -225,6 +225,9 @@ final class MailStatusTest extends TestCase
         $this->assertStringContainsString('User unknown', $row['last_error']);
 
         $this->assertSame(0, Mailbox::check(), 'messages already read are skipped');
+        $searches = file($this->imap_dir . '.log', FILE_IGNORE_NEW_LINES);
+        $this->assertMatchesRegularExpression('/^UID SEARCH UID 1:\* SINCE \d+-\w+-\d{4}$/', $searches[0], 'first look: recent mail only');
+        $this->assertSame('UID SEARCH UID 4:*', end($searches), 'later: everything after the cursor, no date limit');
         [, $case] = $this->call('GET', '/admin/cases/' . $c['id'], [], 'a01');
         $this->assertSame('bounced', $case['referrals'][0]['mail']['state']);
         $this->assertSame(1, count(array_filter($case['events'], static fn($e) => $e['event'] === 'AGENCY_REPLY')));

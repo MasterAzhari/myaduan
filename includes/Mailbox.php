@@ -119,8 +119,9 @@ final class Mailbox
                 $o['uidvalidity'] = $validity;
                 $o['last_uid'] = 0;
             }
-            $since = gmdate('j-M-Y', time() - self::FIRST_DAYS * DAY_IN_SECONDS);
-            $uids = $client->search('UID ' . ((int) $o['last_uid'] + 1) . ':* SINCE ' . $since);
+            // Only the first look is limited to recent mail; after that, everything past the cursor is read, however long cron was down.
+            $since = (int) $o['last_uid'] === 0 ? ' SINCE ' . gmdate('j-M-Y', time() - self::FIRST_DAYS * DAY_IN_SECONDS) : '';
+            $uids = $client->search('UID ' . ((int) $o['last_uid'] + 1) . ':*' . $since);
             // "n:*" always returns the newest message even when it is older than n.
             $uids = array_values(array_filter($uids, static fn(int $u): bool => $u > (int) $o['last_uid']));
             sort($uids);
