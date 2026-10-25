@@ -113,8 +113,12 @@
   async function api(path, { method = 'GET', params, body } = {}) {
     let res;
     try {
-      res = await fetch(apiUrl(path, params), {
+      const url = apiUrl(path, params);
+      // A fresh address each time, so no server or CDN cache can hand back an old answer.
+      if (method === 'GET') url.searchParams.set('_', Date.now().toString(36));
+      res = await fetch(url, {
         method,
+        cache: 'no-store',
         credentials: 'same-origin',
         headers: Object.assign({ 'X-WP-Nonce': cfg.nonce, Accept: 'application/json' }, body ? { 'Content-Type': 'application/json' } : {}),
         body: body ? JSON.stringify(body) : undefined,

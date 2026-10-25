@@ -26,6 +26,22 @@ final class Plugin
         add_filter('wp_authenticate_user', [Users::class, 'block_inactive']);
         add_filter('allow_password_reset', [Users::class, 'no_email_reset'], 10, 2);
         add_action('user_profile_update_errors', [Users::class, 'profile_errors'], 10, 3);
+        add_filter('rest_post_dispatch', [self::class, 'no_cache'], 10, 3);
+    }
+
+    /**
+     * Every MyAduan API answer is live data: no page cache (LiteSpeed) or CDN may keep
+     * a copy, or the portal shows an old case list after a change.
+     */
+    public static function no_cache(\WP_HTTP_Response $response, \WP_REST_Server $server, \WP_REST_Request $request): \WP_HTTP_Response
+    {
+        if (str_starts_with($request->get_route(), '/' . Rest\Controller::NS . '/')) {
+            do_action('litespeed_control_set_nocache', 'MyAduan API');
+            $response->header('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
+            $response->header('CDN-Cache-Control', 'no-store');
+            $response->header('X-LiteSpeed-Cache-Control', 'no-cache');
+        }
+        return $response;
     }
 
     /** Warns site administrators about setup problems that put personal data at risk. */

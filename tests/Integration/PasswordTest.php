@@ -133,6 +133,23 @@ final class PasswordTest extends TestCase
         $this->assertFalse($errors->has_errors());
     }
 
+    public function test_api_answers_are_never_cached(): void
+    {
+        $fired = 0;
+        $count = static function () use (&$fired) { $fired++; };
+        add_action('litespeed_control_set_nocache', $count);
+        wp_set_current_user(self::$users['super']);
+        $req = new WP_REST_Request('GET', '/myaduan/v1/admin/cases');
+        $req->set_query_params(['_' => 'abc']);
+        $res = rest_get_server()->dispatch($req);
+        $res = apply_filters('rest_post_dispatch', $res, rest_get_server(), $req);
+        remove_action('litespeed_control_set_nocache', $count);
+        $this->assertSame(200, $res->get_status(), 'cache-busting parameter is ignored');
+        $this->assertStringContainsString('no-store', $res->get_headers()['Cache-Control']);
+        $this->assertSame('no-cache', $res->get_headers()['X-LiteSpeed-Cache-Control']);
+        $this->assertSame(1, $fired);
+    }
+
     private function staff(string $login, string $role, string $password): int
     {
         $id = wp_insert_user(['user_login' => $login, 'user_pass' => $password, 'user_email' => $login . '@myaduan.my', 'display_name' => $login, 'role' => $role]);
