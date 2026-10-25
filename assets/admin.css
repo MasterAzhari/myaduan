@@ -232,3 +232,4 @@ tr.inactive td { color: var(--muted); }
 .mail-failed, .mail-bounced { background: #fde7e9; color: #a50e0e; }
 .two-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; margin-top: 16px; }
 .referrals small { display: block; }
+.add-area { margin-top: 6px; font-size: .85rem; }

@@ -71,6 +71,13 @@ final class AdminController extends Controller
         register_rest_route(self::NS, $base . '/agencies/(?P<id>\d+)', [
             'methods' => 'POST', 'callback' => [$this, 'save_agency'], 'permission_callback' => [$this, 'can_manage'],
         ]);
+        register_rest_route(self::NS, $base . '/areas', [
+            ['methods' => 'GET', 'callback' => [$this, 'areas'], 'permission_callback' => [$this, 'can_manage']],
+            ['methods' => 'POST', 'callback' => [$this, 'add_areas'], 'permission_callback' => [$this, 'can_manage']],
+        ]);
+        register_rest_route(self::NS, $base . '/areas/(?P<id>\d+)', [
+            'methods' => 'POST', 'callback' => [$this, 'update_area'], 'permission_callback' => [$this, 'can_manage'],
+        ]);
         register_rest_route(self::NS, $base . '/mail', [
             'methods' => 'GET', 'callback' => [$this, 'mail'], 'permission_callback' => [$this, 'can_manage'],
         ]);
@@ -155,6 +162,7 @@ final class AdminController extends Controller
             return [
                 'categories' => $catalog->categories(),
                 'areas' => $catalog->areas(),
+                'locality_names' => $catalog->locality_names(),
                 'statuses' => Workflow::STATUSES,
                 'priorities' => Workflow::PRIORITIES,
                 'closure_reasons' => Workflow::CLOSURE_REASONS,
@@ -251,6 +259,22 @@ final class AdminController extends Controller
     {
         $id = (int) ($req['id'] ?? 0);
         return $this->respond(fn() => (new Agencies())->save($id, $req->get_json_params() ?: $req->get_body_params()), $id ? 200 : 201);
+    }
+
+    public function areas(): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(fn() => (new Catalog())->admin_areas());
+    }
+
+    public function add_areas(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        $p = $req->get_json_params() ?: $req->get_body_params();
+        return $this->respond(fn() => (new Catalog())->add_localities((string) ($p['dun_slug'] ?? ''), (string) ($p['names'] ?? '')), 201);
+    }
+
+    public function update_area(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(fn() => (new Catalog())->update_locality((int) $req['id'], $req->get_json_params() ?: $req->get_body_params()));
     }
 
     public function mail(\WP_REST_Request $req): \WP_REST_Response|\WP_Error

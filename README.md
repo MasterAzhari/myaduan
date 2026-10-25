@@ -98,6 +98,7 @@ define('MYADUAN_STORAGE_DIR', '/home/uXXXX/myaduan-files'); // kalau nak tukar l
 - Sesuai untuk telefon; pegawai di lapangan boleh terima tugasan dan rekod tindakan dari telefon.
 - **Keputusan kes** (hanya pegawai yang ditugaskan): *Panjangkan ke agensi* (pilih agensi, e-mel dihantar), *Tindakan sendiri*, *Perlu maklumat lanjut*, atau *Tutup kes* (mohon penutupan → Super Admin sahkan). Tiada siapa boleh proses aduan sebelum Super Admin tugaskan kepada pegawai atau dirinya sendiri. *Status agensi* rekod maklum balas dan no. rujukan agensi.
 - **Agensi** (Super Admin): 40 agensi dari senarai rasmi dimasukkan semasa pasang. Tambah, ubah e-mel/CC, atau nyahaktif.
+- **Kawasan** (Super Admin): senarai taman/kampung bagi setiap DUN. Tampal banyak nama sekaligus (satu nama satu baris), ubah nama, atau sembunyikan. Nama yang disembunyikan kekal pada kes lama. Taman yang belum ada juga boleh ditambah terus dari borang "Kelaskan / tugaskan".
 - **E-mel rujukan agensi** dihantar dari info@myaduan.my dengan nama pegawai sebagai penghantar ("Nama (MyAduan)") dan Reply-To info@. Status e-mel dipapar di sebelah setiap agensi dalam kes: *Belum dihantar*, *Dihantar* (pelayan e-mel kita telah menghantarnya keluar), *Gagal* (dengan ralat) atau *Bounce* (dengan sebab).
 - **E-mel** (Super Admin): log semua e-mel dengan status, tapisan, *Hantar semula* untuk yang gagal/bounce, *Hantar & semak sekarang*, e-mel ujian, dan sambungan mailbox IMAP (info@, imap.hostinger.com:993). Kata laluan mailbox disulitkan dan tidak dipaparkan semula.
 - **Mailbox info@** disemak setiap 5 minit (baca sahaja): laporan bounce yang memetik pengepala `X-MyAduan-Id` menanda e-mel itu *Bounce*; balasan agensi yang menyebut rujukan kes dan datang dari agensi yang dirujuk (alamat, CC atau domain sama) masuk ke sejarah kes sebagai *Balasan agensi* dan menjadi notifikasi kepada pegawai yang memegang kes. Petikan e-mel asal dibuang.
@@ -141,6 +142,7 @@ Operasi: `classify`, `assign`, `accept`, `action`, `comment`, `request_close`, `
 | GET, POST | `/admin/users` | Super Admin. POST: `name`, `email`, `password`, `role` (`superadmin`/`officer`/`viewer`), `policy` untuk pegawai |
 | POST | `/admin/users/{id}` | Super Admin. Mana-mana medan di atas + `active`; `password` kosong = tiada perubahan |
 | GET, POST | `/admin/agencies`, POST `/admin/agencies/{id}` | Super Admin. `name`, `officer`, `email`, `cc`, `active` |
+| GET, POST | `/admin/areas`, POST `/admin/areas/{id}` | Super Admin. Tambah: `dun_slug`, `names` (satu baris satu nama). Ubah: `name`, `active` |
 | GET | `/admin/mail` | Super Admin. `state` (`pending`/`sent`/`failed`/`bounced`). Pulang log, kiraan dan status mailbox |
 | POST | `/admin/mail/{id}/retry`, `/admin/mail/run`, `/admin/mail/test` | Super Admin. `test`: `to` |
 | POST, DELETE | `/admin/mailbox` | Super Admin. `host`, `port`, `user`, `pass` (kosong = kekal); disimpan selepas log masuk berjaya |
