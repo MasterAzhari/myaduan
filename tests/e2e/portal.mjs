@@ -164,6 +164,15 @@ await phone.locator('.op-form button[type=submit]').click();
 await phone.locator('.referrals li', { hasText: 'Majlis Perbandaran Selayang' }).waitFor();
 assert((await phone.locator('.case-head .badges').textContent()).includes('Dipanjangkan ke agensi'), 'kes ditanda dipanjangkan ke agensi');
 await phone.screenshot({ path: `${SHOTS}/p5c-dipanjangkan.png`, fullPage: true });
+assert(await phone.locator('.referrals .badge[class*=mail-]').count() >= 1, 'status e-mel dipapar di sebelah agensi');
+
+/* ---- Super Admin: e-mail log ---- */
+await desk.locator('.nav a', { hasText: 'E-mel' }).click();
+await desk.locator('h1', { hasText: 'E-mel' }).waitFor();
+await desk.locator('tbody tr', { hasText: created.reference }).first().waitFor();
+assert(await desk.locator('tbody tr', { hasText: created.reference }).locator('.badge[class*=mail-]').count() >= 1, 'log e-mel menunjukkan e-mel rujukan agensi dengan status');
+assert(await desk.locator('h2', { hasText: 'Mailbox untuk bounce' }).isVisible(), 'borang sambungan mailbox');
+await desk.screenshot({ path: `${SHOTS}/p5d-emel.png`, fullPage: true });
 
 await phone.locator('[data-op=action]').click();
 await phone.locator('textarea[name=note]').fill('Lawatan tapak. Aduan dipanjangkan kepada MPS untuk ganti lampu.');

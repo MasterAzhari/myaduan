@@ -13,6 +13,10 @@ if (!defined('ABSPATH')) {
  * they gave an address) carries their reference number; its address is wiped
  * from the queue once sent. Referral emails to agencies carry the complaint and
  * its photos but no complainant details.
+ *
+ * Mail goes out right after the request that queued it (cron picks up the rest).
+ * Each row keeps its state for the portal: pending → sent, failed, or bounced
+ * once Mailbox finds the returned message in the sender mailbox.
  */
 final class Mailer
 {
@@ -21,6 +25,18 @@ final class Mailer
     public const MAX_ATTEMPTS = 3;
     /** Dedupe-key prefix of the complainant's acknowledgement. */
     private const ACK = 'ack:';
+    /** Header that ties a returned (bounced) message back to its queue row. */
+    public const ID_HEADER = 'X-MyAduan-Id';
+    /** Kept in the queued headers only: the sender name for this message, never sent as a header. */
+    private const FROM_NAME_HEADER = 'X-MyAduan-From-Name';
+    public const STATES = [
+        'pending' => 'Belum dihantar',
+        'sending' => 'Sedang dihantar',
+        'sent' => 'Dihantar',
+        'failed' => 'Gagal dihantar',
+        'bounced' => 'Bounce (ditolak)',
+    ];
+    private static bool $flush = false;
 
     public static function register(): void
     {
@@ -29,6 +45,8 @@ final class Mailer
             return $s;
         });
         add_action(self::HOOK, [self::class, 'process']);
+        add_action(self::HOOK, [Mailbox::class, 'check'], 20);
+        add_action('shutdown', [self::class, 'flush'], 99);
         add_action('init', static function (): void {
             if (!wp_next_scheduled(self::HOOK)) {
                 wp_schedule_event(time() + 60, 'myaduan_5min', self::HOOK);
@@ -42,19 +60,135 @@ final class Mailer
      * @param list<string> $headers extra headers such as "Cc: a@b.my"
      * @param list<int> $attachments attachment ids, resolved to files when sending
      */
-    public static function queue(string $dedupe_key, string $to, string $subject, string $body, ?int $case_id = null, array $headers = [], array $attachments = []): void
+    public static function queue(string $dedupe_key, string $to, string $subject, string $body, ?int $case_id = null, array $headers = [], array $attachments = [], ?int $referral_id = null): void
     {
         global $wpdb;
         if (!is_email($to)) {
             return;
         }
         $now = Cases::now();
-        $wpdb->query($wpdb->prepare(
-            'INSERT IGNORE INTO ' . Schema::table('mail_queue') . ' (dedupe_key, case_id, recipient, subject, body, headers, attachments, state, attempts, created_at, updated_at) VALUES (%s, %d, %s, %s, %s, %s, %s, %s, 0, %s, %s)',
-            mb_substr($dedupe_key, 0, 120), (int) $case_id, $to, $subject, $body,
+        $added = $wpdb->query($wpdb->prepare(
+            'INSERT IGNORE INTO ' . Schema::table('mail_queue') . ' (dedupe_key, case_id, referral_id, recipient, subject, body, headers, attachments, state, attempts, created_at, updated_at) VALUES (%s, %d, %d, %s, %s, %s, %s, %s, %s, 0, %s, %s)',
+            mb_substr($dedupe_key, 0, 120), (int) $case_id, (int) $referral_id, $to, $subject, $body,
             $headers ? wp_json_encode(array_values($headers)) : '', $attachments ? wp_json_encode(array_values($attachments)) : '',
             'pending', $now, $now
         ));
+        self::$flush = self::$flush || $added === 1;
+    }
+
+    /** Sends what this request queued once the response has gone back to the browser. */
+    public static function flush(): void
+    {
+        if (!self::$flush) {
+            return;
+        }
+        self::$flush = false;
+        if (function_exists('litespeed_finish_request')) {
+            litespeed_finish_request();
+        } elseif (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+        self::process();
+    }
+
+    /** @return array{state:string, label:string, error:?string, at:?string} what the portal shows for one message */
+    public static function status(array $row): array
+    {
+        $state = (string) $row['state'];
+        $label = self::STATES[$state] ?? $state;
+        if ($state === 'pending' && (int) $row['attempts'] > 0) {
+            $label = 'Belum dihantar (cuba semula)';
+        }
+        return [
+            'state' => $state,
+            'label' => $label,
+            'error' => $row['last_error'] ?: null,
+            'at' => Cases::iso($row['sent_at'] ?: $row['updated_at']),
+        ];
+    }
+
+    /** @return list<array> recent messages for the Super Admin's e-mail log; complainants' addresses are never shown */
+    public static function log(int $limit = 100, ?string $state = null): array
+    {
+        global $wpdb;
+        $q = Schema::table('mail_queue');
+        $where = $state !== null && isset(self::STATES[$state]) ? $wpdb->prepare('WHERE m.state = %s', $state) : '';
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT m.id, m.dedupe_key, m.case_id, m.referral_id, m.recipient, m.subject, m.state, m.attempts, m.last_error, m.sent_at, m.created_at, m.updated_at, c.reference
+             FROM $q m LEFT JOIN " . Schema::table('cases') . " c ON c.id = m.case_id $where ORDER BY m.id DESC LIMIT %d",
+            max(1, min(500, $limit))
+        ), ARRAY_A);
+        return array_map(static fn(array $r): array => [
+            'id' => (int) $r['id'],
+            'kind' => self::kind((string) $r['dedupe_key']),
+            'recipient' => str_starts_with((string) $r['dedupe_key'], self::ACK) ? 'Pengadu' : $r['recipient'],
+            'subject' => $r['subject'],
+            'case_id' => $r['case_id'] ? (int) $r['case_id'] : null,
+            'reference' => $r['reference'],
+            'attempts' => (int) $r['attempts'],
+            'created_at' => Cases::iso($r['created_at']),
+            'status' => self::status($r),
+            'can_retry' => in_array($r['state'], ['failed', 'bounced'], true) && !str_starts_with((string) $r['dedupe_key'], self::ACK),
+        ], $rows);
+    }
+
+    /** @return array<string,int> number of messages in each state */
+    public static function counts(): array
+    {
+        global $wpdb;
+        $out = array_fill_keys(array_keys(self::STATES), 0);
+        foreach ($wpdb->get_results('SELECT state, COUNT(*) n FROM ' . Schema::table('mail_queue') . ' GROUP BY state', ARRAY_A) as $r) {
+            $out[$r['state']] = (int) $r['n'];
+        }
+        return $out;
+    }
+
+    /** Queues and sends a short test message now; returns its status. */
+    public static function test(string $to, string $by): array
+    {
+        global $wpdb;
+        $to = sanitize_email($to);
+        if (!is_email($to)) {
+            throw new Rest\FieldErrors(['to' => 'Masukkan alamat e-mel yang sah.']);
+        }
+        $key = 'test:' . wp_generate_uuid4();
+        self::queue($key, $to, 'E-mel ujian MyAduan', implode("\n", [
+            'Ini e-mel ujian dari sistem MyAduan Parlimen Gombak.',
+            '',
+            'Dihantar oleh: ' . $by,
+            'Masa: ' . wp_date('d/m/Y g:i A'),
+            '',
+            'Jika anda menerima e-mel ini, penghantaran e-mel MyAduan berfungsi.',
+        ]));
+        self::$flush = false;
+        self::process();
+        $row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . Schema::table('mail_queue') . ' WHERE dedupe_key = %s', $key), ARRAY_A);
+        return $row ? ['id' => (int) $row['id'], 'status' => self::status($row)] : [];
+    }
+
+    /** Puts a failed or bounced message back in the queue, for after the address or mailbox is fixed. */
+    public static function retry(int $id): void
+    {
+        global $wpdb;
+        $row = $wpdb->get_row($wpdb->prepare('SELECT dedupe_key, state FROM ' . Schema::table('mail_queue') . ' WHERE id = %d', $id), ARRAY_A);
+        if (!$row) {
+            throw new WorkflowException('E-mel tidak ditemui.', 'not_found', 404);
+        }
+        if (!in_array($row['state'], ['failed', 'bounced'], true) || str_starts_with($row['dedupe_key'], self::ACK)) {
+            throw new WorkflowException('Hanya e-mel yang gagal atau bounce boleh dihantar semula.');
+        }
+        $wpdb->update(Schema::table('mail_queue'), ['state' => 'pending', 'attempts' => 0, 'last_error' => null, 'sent_at' => null, 'updated_at' => Cases::now()], ['id' => $id]);
+        self::$flush = true;
+    }
+
+    private static function kind(string $key): string
+    {
+        return match (strstr($key, ':', true)) {
+            'ref' => 'Agensi',
+            'ack' => 'Pengadu',
+            'test' => 'Ujian',
+            default => 'Staf',
+        };
     }
 
     /** Staff copies by email are optional; the portal is where staff are notified. */
@@ -64,7 +198,7 @@ final class Mailer
     }
 
     /** The referral to one agency: complaint, location and photos, no complainant details. */
-    public static function queue_referral(int $case_id, array $agency, string $message, string $request_id): void
+    public static function queue_referral(int $case_id, array $agency, string $message, string $request_id, string $sender_name = ''): void
     {
         global $wpdb;
         $case = $wpdb->get_row($wpdb->prepare(
@@ -121,10 +255,15 @@ final class Mailer
             '',
             'Sekian, terima kasih.',
             '',
+            $sender_name !== '' ? $sender_name : null,
             Settings::get('mail_from_name'),
             Settings::mail_from(),
         ];
         $headers = ['Reply-To: ' . Settings::mail_from()];
+        if ($sender_name !== '') {
+            // Sent from info@ (the mailbox SMTP signs in as) under the officer's name; replies come back to info@ and into the case.
+            $headers[] = self::FROM_NAME_HEADER . ': ' . str_replace(["\r", "\n"], ' ', $sender_name . ' (MyAduan)');
+        }
         if ($agency['cc']) {
             $headers[] = 'Cc: ' . implode(', ', $agency['cc']);
         }
@@ -135,7 +274,8 @@ final class Mailer
             implode("\n", array_filter($lines, static fn($l) => $l !== null)),
             $case_id,
             $headers,
-            $photos
+            $photos,
+            isset($agency['referral_id']) ? (int) $agency['referral_id'] : null
         );
     }
 
@@ -230,8 +370,17 @@ final class Mailer
             $catch = static function (\WP_Error $e) use (&$error): void {
                 $error = $e->get_error_message();
             };
+            $headers = json_decode((string) $m['headers'], true) ?: [];
+            $name = Settings::get('mail_from_name');
+            foreach ($headers as $i => $line) {
+                if (stripos($line, self::FROM_NAME_HEADER . ':') === 0) {
+                    $name = trim(substr($line, strlen(self::FROM_NAME_HEADER) + 1)) ?: $name;
+                    unset($headers[$i]);
+                }
+            }
+            $headers = array_values($headers);
             $from = static fn(): string => Settings::mail_from();
-            $from_name = static fn(): string => Settings::get('mail_from_name');
+            $from_name = static fn(): string => $name;
             add_action('wp_mail_failed', $catch);
             add_filter('wp_mail_from', $from, 99);
             add_filter('wp_mail_from_name', $from_name, 99);
@@ -242,12 +391,13 @@ final class Mailer
                     $files[] = $file;
                 }
             }
-            $ok = wp_mail($m['recipient'], $m['subject'], $m['body'], json_decode((string) $m['headers'], true) ?: [], $files);
+            $headers[] = self::ID_HEADER . ': ' . self::bounce_token((int) $m['id']);
+            $ok = wp_mail($m['recipient'], $m['subject'], $m['body'], $headers, $files);
             remove_filter('wp_mail_from', $from, 99);
             remove_filter('wp_mail_from_name', $from_name, 99);
             remove_action('wp_mail_failed', $catch);
             $state = $ok ? 'sent' : ((int) $m['attempts'] >= self::MAX_ATTEMPTS ? 'failed' : 'pending');
-            $done = ['state' => $state, 'last_error' => $ok ? null : mb_substr($error ?: 'wp_mail gagal', 0, 255), 'updated_at' => Cases::now()];
+            $done = ['state' => $state, 'last_error' => $ok ? null : mb_substr($error ?: 'wp_mail gagal', 0, 255), 'updated_at' => Cases::now(), 'sent_at' => $ok ? Cases::now() : null];
             if ($state !== 'pending' && str_starts_with($m['dedupe_key'], self::ACK)) {
                 // The complainant's address is kept encrypted on the case only, not in plain text here.
                 $done['recipient'] = '';
@@ -256,6 +406,20 @@ final class Mailer
             $sent += $ok ? 1 : 0;
         }
         return $sent;
+    }
+
+    /** "m123-<hmac>": a returned message can only point at a row this site really sent. */
+    public static function bounce_token(int $id): string
+    {
+        return 'm' . $id . '-' . substr(hash_hmac('sha256', 'mail:' . $id, wp_salt('auth')), 0, 12);
+    }
+
+    public static function token_id(string $token): ?int
+    {
+        if (!preg_match('/^m(\d+)-([0-9a-f]{12})$/', $token, $m)) {
+            return null;
+        }
+        return hash_equals(self::bounce_token((int) $m[1]), $token) ? (int) $m[1] : null;
     }
 
     private static function summary(int $id): array

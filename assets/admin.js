@@ -22,7 +22,7 @@
     CIPTA: 'Aduan diterima', IMPORT: 'Diimport dari Google Sheet lama', CLASSIFY: 'Dikelaskan', ASSIGN: 'Ditugaskan', ACCEPT: 'Tugasan diterima', ACTION: 'Tindakan direkod',
     COMMENT: 'Catatan dalaman', REQUEST_CLOSE: 'Mohon penutupan', APPROVE_CLOSE: 'Disahkan & ditutup', RETURN: 'Dikembalikan untuk tindakan',
     REOPEN: 'Dibuka semula', PUBLISH: 'Mesej awam dikemas kini', REFER: 'Dipanjangkan ke agensi', SELF: 'Tindakan sendiri',
-    NEED_INFO: 'Perlu maklumat lanjut', AGENCY_UPDATE: 'Status agensi dikemas kini',
+    NEED_INFO: 'Perlu maklumat lanjut', AGENCY_UPDATE: 'Status agensi dikemas kini', AGENCY_REPLY: 'Balasan agensi (e-mel)',
   };
   const FIELD = {
     title: 'Tajuk', category_code: 'Kategori', dun_slug: 'DUN', area_id: 'Taman/kampung', priority: 'Keutamaan', owner_id: 'Pegawai',
@@ -161,7 +161,7 @@
     const links = [];
     if (me.can.work || me.can.manage) links.push(['#/kes', 'Senarai kes', 'kes']);
     else links.push(['#/ringkasan', 'Ringkasan', 'ringkasan']);
-    if (me.can.manage) links.push(['#/agensi', 'Agensi', 'agensi'], ['#/pengguna', 'Pengguna', 'pengguna']);
+    if (me.can.manage) links.push(['#/agensi', 'Agensi', 'agensi'], ['#/emel', 'E-mel', 'emel'], ['#/pengguna', 'Pengguna', 'pengguna']);
     view = h('main', { id: 'view', tabindex: '-1' });
     const NS = 'http://www.w3.org/2000/svg';
     const icon = document.createElementNS(NS, 'svg');
@@ -192,6 +192,7 @@
       if (key === 'kes' && parts[1] && canCases) await caseView(parseInt(parts[1], 10));
       else if (key === 'pengguna' && state.me.can.manage) await usersView();
       else if (key === 'agensi' && state.me.can.manage) await agenciesView();
+      else if (key === 'emel' && state.me.can.manage) await mailView(query);
       else if (key === 'notifikasi') await notificationsView();
       else if (key === 'profil') profileView();
       else if (canCases) { state.lastList = location.hash || '#/kes'; await listView(query); }
@@ -413,7 +414,8 @@
       c.referrals.length ? h('section', { class: 'card' },
         h('h2', {}, 'Dipanjangkan ke agensi'),
         h('ul', { class: 'referrals' }, c.referrals.map((r) => h('li', {},
-          h('div', {}, h('strong', {}, r.agency_name), ' ', h('span', { class: 'badge ag-' + slug(r.status) }, r.status)),
+          h('div', {}, h('strong', {}, r.agency_name), ' ', h('span', { class: 'badge ag-' + slug(r.status) }, r.status), ' ', mailBadge(r.mail)),
+          r.mail?.error ? h('small', { class: 'bad-text' }, (r.mail.state === 'bounced' ? 'Sebab bounce: ' : 'Ralat: ') + r.mail.error) : null,
           h('small', { class: 'muted' }, `Dihantar ${formatDate(r.created_at)}` + (r.agency_email ? ' ke ' + r.agency_email : '')
             + (r.reference_no ? ` · Rujukan agensi: ${r.reference_no}` : '') + (r.updated_at !== r.created_at ? ` · Dikemas kini ${formatDate(r.updated_at)}` : '')))))) : null,
       h('section', { class: 'card' },
@@ -450,7 +452,20 @@
       e.status_from && e.status_to && e.status_from !== e.status_to ? h('div', { class: 'small' }, statusBadge(e.status_from), ' → ', statusBadge(e.status_to)) : null,
       changes.length ? h('ul', { class: 'changes' }, changes.map(([k, [from, to]]) => h('li', {},
         k === 'gambar' ? `${to} gambar dilampirkan` : `${FIELD[k]}: ${changeValue(k, from)} → ${changeValue(k, to)}`))) : null,
+      e.event === 'AGENCY_REPLY' && e.changes?.subject ? h('small', { class: 'muted' }, `${e.changes.email || ''} · ${e.changes.subject}`) : null,
       e.note ? h('p', { class: 'note' }, e.note) : null);
+  }
+
+  const MAIL_HELP = {
+    pending: 'Masih dalam sistem MyAduan, belum keluar.',
+    sending: 'Sedang dihantar ke pelayan e-mel.',
+    sent: 'Pelayan e-mel kita telah menghantarnya keluar. Jika penerima menolak, status bertukar kepada Bounce.',
+    failed: 'Tidak dapat dihantar selepas beberapa cubaan. Lihat ralat.',
+    bounced: 'Pelayan penerima menolak e-mel ini. Lihat sebab.',
+  };
+  function mailBadge(m) {
+    if (!m) return null;
+    return h('span', { class: 'badge mail-' + m.state, title: MAIL_HELP[m.state] || '' }, 'E-mel: ' + m.label);
   }
 
   /* ---------- case actions ---------- */
@@ -1018,6 +1033,100 @@
       h('div', { class: 'card table-wrap' }, h('table', { class: 'users' },
         h('thead', {}, h('tr', {}, ['Agensi', 'E-mel', 'Status', ''].map((t) => h('th', { scope: 'col' }, t)))),
         h('tbody', {}, rows))));
+  }
+
+  /* ---------- e-mail log ---------- */
+
+  async function mailView(query) {
+    view.replaceChildren(h('p', { class: 'loading' }, 'Memuatkan e-mel…'));
+    const data = await api('/admin/mail', { params: { state: query.state || '' } });
+    const label = { pending: 'Belum dihantar', sent: 'Dihantar', failed: 'Gagal', bounced: 'Bounce' };
+    const chips = h('div', { class: 'chips' },
+      h('a', { class: 'chip' + (!query.state ? ' active' : ''), href: '#/emel' }, 'Semua'),
+      Object.entries(label).map(([k, t]) => h('a', { class: 'chip' + (query.state === k ? ' active' : ''), href: '#/emel?state=' + k }, `${t} (${data.counts[k] || 0})`)));
+    const rows = data.items.map((m) => h('tr', {},
+      h('td', { 'data-label': 'Masa' }, formatDate(m.created_at), h('small', {}, m.kind)),
+      h('td', { 'data-label': 'E-mel', class: 'main-col' }, h('span', { class: 'title' }, m.subject), h('small', {}, 'Kepada: ' + m.recipient)),
+      h('td', { 'data-label': 'Kes' }, m.case_id ? h('a', { href: '#/kes/' + m.case_id }, m.reference || '#' + m.case_id) : '—'),
+      h('td', { 'data-label': 'Status' }, mailBadge(m.status),
+        m.status.state === 'sent' ? h('small', {}, formatDate(m.status.at)) : null,
+        m.status.error ? h('small', { class: 'bad-text' }, m.status.error) : null),
+      h('td', { 'data-label': '' }, m.can_retry ? h('button', { class: 'btn ghost small', type: 'button', onclick: async (e) => {
+        e.currentTarget.disabled = true;
+        try { await api(`/admin/mail/${m.id}/retry`, { method: 'POST' }); toast('E-mel dimasukkan semula untuk dihantar.'); await mailView(query); } catch (err) { toast(err.message, 'error'); e.currentTarget.disabled = false; }
+      } }, 'Hantar semula') : null)));
+
+    const run = h('button', { class: 'btn ghost', type: 'button', onclick: async () => {
+      run.disabled = true;
+      try {
+        const r = await api('/admin/mail/run', { method: 'POST' });
+        toast(`${r.sent} e-mel dihantar. ${r.found} bounce/balasan baru ditemui.`);
+        await mailView(query);
+      } catch (err) { toast(err.message, 'error'); run.disabled = false; }
+    } }, 'Hantar & semak sekarang');
+
+    view.replaceChildren(
+      h('div', { class: 'page-head' }, h('h1', {}, 'E-mel'), run),
+      h('p', { class: 'muted small' }, `Semua e-mel MyAduan dihantar dari ${data.from}. "Dihantar" bermaksud pelayan e-mel kita telah menghantarnya keluar; tiada sistem e-mel boleh memastikan e-mel dibaca. Jika penerima menolaknya, status bertukar kepada Bounce (perlu sambungan mailbox di bawah).`),
+      chips,
+      h('div', { class: 'card table-wrap' }, rows.length ? h('table', { class: 'users mail' },
+        h('thead', {}, h('tr', {}, ['Masa', 'E-mel', 'Kes', 'Status', ''].map((t) => h('th', { scope: 'col' }, t)))),
+        h('tbody', {}, rows)) : h('p', { class: 'muted' }, 'Tiada e-mel.')),
+      h('div', { class: 'two-cards' }, mailboxCard(data.mailbox, () => mailView(query)), testMailCard(() => mailView(query))));
+  }
+
+  function mailboxCard(box, reload) {
+    const pw = passwordInput('pass', { autocomplete: 'off', minlength: null, placeholder: box.configured ? 'Kosongkan untuk kekal' : '' });
+    const form = h('form', { class: 'card user-form', novalidate: true, onsubmit: async (e) => {
+      e.preventDefault();
+      showErrors(form);
+      await submitting(form, async () => {
+        try {
+          await api('/admin/mailbox', { method: 'POST', body: { host: form.elements.host.value, port: form.elements.port.value, user: form.elements.user.value, pass: pw.input.value } });
+          toast('Mailbox disambung. Bounce dan balasan agensi akan disemak setiap 5 minit.');
+          await reload();
+        } catch (err) { showErrors(form, err); }
+      });
+    } },
+      h('h2', {}, 'Mailbox untuk bounce & balasan agensi'),
+      h('p', { class: 'small ' + (box.configured ? (box.last_error ? 'bad-text' : '') : 'muted') },
+        !box.configured ? 'Belum disambung. Tanpa ini, bounce dan balasan agensi tidak dapat dikesan.'
+          : box.last_error ? 'Ralat semakan terakhir: ' + box.last_error
+            : `Disambung. Semakan terakhir: ${box.last_check ? formatDate(box.last_check) : 'belum'} · ${box.found} bounce · ${box.replies} balasan agensi.`),
+      h('div', { class: 'two' },
+        field('Pelayan IMAP', h('input', { name: 'host', value: box.host, autocomplete: 'off' })),
+        field('Port', h('input', { name: 'port', value: String(box.port), inputmode: 'numeric', autocomplete: 'off' }))),
+      field('Mailbox', h('input', { name: 'user', type: 'email', value: box.user, autocomplete: 'off' }), { help: 'Mailbox penghantar, biasanya info@myaduan.my.' }),
+      h('div', { class: 'field', 'data-field': 'pass' }, h('label', { for: pw.input.id }, 'Kata laluan mailbox'), pw.wrap,
+        h('small', { class: 'help' }, 'Disimpan secara rahsia (disulitkan) dan tidak dipaparkan semula. Jangan kongsi dalam chat.'), h('small', { class: 'err' })),
+      h('p', { class: 'form-error', role: 'alert' }),
+      h('div', { class: 'form-actions' }, h('button', { class: 'btn', type: 'submit' }, box.configured ? 'Simpan' : 'Sambung mailbox'),
+        box.configured ? h('button', { class: 'btn ghost', type: 'button', onclick: async () => {
+          if (!confirm('Putuskan sambungan mailbox? Bounce dan balasan agensi tidak akan dikesan lagi.')) return;
+          await api('/admin/mailbox', { method: 'DELETE' }); toast('Sambungan mailbox diputuskan.'); await reload();
+        } }, 'Putuskan') : null));
+    return form;
+  }
+
+  function testMailCard(reload) {
+    const out = h('p', { class: 'small', 'aria-live': 'polite' });
+    const form = h('form', { class: 'card user-form', novalidate: true, onsubmit: async (e) => {
+      e.preventDefault();
+      showErrors(form);
+      out.textContent = '';
+      await submitting(form, async () => {
+        try {
+          const r = await api('/admin/mail/test', { method: 'POST', body: { to: form.elements.to.value } });
+          out.replaceChildren(mailBadge(r.status), r.status?.error ? ' ' + r.status.error : '');
+          await reload();
+        } catch (err) { showErrors(form, err); }
+      });
+    } },
+      h('h2', {}, 'Hantar e-mel ujian'),
+      field('Kepada', h('input', { name: 'to', type: 'email', autocomplete: 'off', placeholder: 'contoh: nama@gmail.com' })),
+      h('p', { class: 'form-error', role: 'alert' }), out,
+      h('div', { class: 'form-actions' }, h('button', { class: 'btn', type: 'submit' }, 'Hantar ujian')));
+    return form;
   }
 
   function agencyForm(a, panel) {

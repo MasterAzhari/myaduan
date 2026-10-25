@@ -3,6 +3,9 @@ namespace MyAduan\Rest;
 
 use MyAduan\Access;
 use MyAduan\Agencies;
+use MyAduan\Mailbox;
+use MyAduan\Mailer;
+use MyAduan\Settings;
 use MyAduan\Notifications;
 use MyAduan\WebPush;
 use MyAduan\Catalog;
@@ -67,6 +70,22 @@ final class AdminController extends Controller
         ]);
         register_rest_route(self::NS, $base . '/agencies/(?P<id>\d+)', [
             'methods' => 'POST', 'callback' => [$this, 'save_agency'], 'permission_callback' => [$this, 'can_manage'],
+        ]);
+        register_rest_route(self::NS, $base . '/mail', [
+            'methods' => 'GET', 'callback' => [$this, 'mail'], 'permission_callback' => [$this, 'can_manage'],
+        ]);
+        register_rest_route(self::NS, $base . '/mail/(?P<id>\d+)/retry', [
+            'methods' => 'POST', 'callback' => [$this, 'mail_retry'], 'permission_callback' => [$this, 'can_manage'],
+        ]);
+        register_rest_route(self::NS, $base . '/mail/run', [
+            'methods' => 'POST', 'callback' => [$this, 'mail_run'], 'permission_callback' => [$this, 'can_manage'],
+        ]);
+        register_rest_route(self::NS, $base . '/mail/test', [
+            'methods' => 'POST', 'callback' => [$this, 'mail_test'], 'permission_callback' => [$this, 'can_manage'],
+        ]);
+        register_rest_route(self::NS, $base . '/mailbox', [
+            ['methods' => 'POST', 'callback' => [$this, 'mailbox_save'], 'permission_callback' => [$this, 'can_manage']],
+            ['methods' => 'DELETE', 'callback' => [$this, 'mailbox_forget'], 'permission_callback' => [$this, 'can_manage']],
         ]);
         register_rest_route(self::NS, $base . '/notifications', [
             'methods' => 'GET', 'callback' => [$this, 'notifications'], 'permission_callback' => [$this, 'can_access'],
@@ -232,6 +251,46 @@ final class AdminController extends Controller
     {
         $id = (int) ($req['id'] ?? 0);
         return $this->respond(fn() => (new Agencies())->save($id, $req->get_json_params() ?: $req->get_body_params()), $id ? 200 : 201);
+    }
+
+    public function mail(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(fn() => [
+            'items' => Mailer::log(100, $req->get_param('state') ? (string) $req->get_param('state') : null),
+            'counts' => Mailer::counts(),
+            'mailbox' => Mailbox::settings(),
+            'from' => Settings::mail_from(),
+        ]);
+    }
+
+    public function mail_retry(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(function () use ($req) {
+            Mailer::retry((int) $req['id']);
+            return ['ok' => true];
+        });
+    }
+
+    public function mail_run(): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(fn() => ['sent' => Mailer::process(), 'found' => Mailbox::check(), 'mailbox' => Mailbox::settings()]);
+    }
+
+    public function mail_test(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        $p = $req->get_json_params() ?: $req->get_body_params();
+        return $this->respond(fn() => Mailer::test((string) ($p['to'] ?? ''), wp_get_current_user()->display_name));
+    }
+
+    public function mailbox_save(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        $p = $req->get_json_params() ?: $req->get_body_params();
+        return $this->respond(fn() => Mailbox::save($p['host'] ?? '', $p['port'] ?? 993, $p['user'] ?? '', $p['pass'] ?? ''));
+    }
+
+    public function mailbox_forget(): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(fn() => Mailbox::forget());
     }
 
     public function notifications(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
