@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       MyAduan
  * Description:       Sistem aduan Parlimen Gombak: borang awam, semakan status, portal admin dan dashboard. Data disimpan dalam MySQL WordPress.
- * Version:           0.5.0
+ * Version:           0.5.1
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Author:            Azhari
@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MYADUAN_VERSION', '0.5.0');
+define('MYADUAN_VERSION', '0.5.1');
 define('MYADUAN_DB_VERSION', 3);
 define('MYADUAN_FILE', __FILE__);
 define('MYADUAN_DIR', __DIR__);

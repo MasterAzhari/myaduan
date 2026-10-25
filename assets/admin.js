@@ -462,8 +462,15 @@
     if (ops.includes('publish')) add('publish', 'Mesej awam', publishForm);
     if (ops.includes('comment')) add('comment', 'Catatan dalaman', (x) => noteForm(x, 'comment', 'Simpan catatan', 'Catatan untuk pasukan (tidak dilihat pengadu)'));
 
+    if (!c.owner_id && c.status !== 'DITUTUP') {
+      panel.append(h('p', { class: 'help-box' }, state.me.can.manage
+        ? 'Kes ini belum ditugaskan. Tugaskan kepada pegawai atau diri sendiri untuk mula memproses.'
+        : 'Kes ini belum ditugaskan. Anda boleh membaca kes, tetapi tindakan hanya boleh dibuat selepas Super Admin menugaskannya.'));
+    }
     if (!buttons.length) {
-      panel.append(h('p', { class: 'muted' }, c.status === 'DITUTUP' ? 'Kes ini telah ditutup.' : 'Tiada tindakan untuk anda pada kes ini. Hanya pegawai yang ditugaskan boleh mengemas kini.'));
+      if (c.owner_id || c.status === 'DITUTUP') {
+        panel.append(h('p', { class: 'muted' }, c.status === 'DITUTUP' ? 'Kes ini telah ditutup.' : 'Tiada tindakan untuk anda pada kes ini. Hanya pegawai yang ditugaskan boleh mengemas kini.'));
+      }
       return panel;
     }
     panel.append(h('div', { class: 'op-buttons' }, buttons), area);

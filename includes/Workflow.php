@@ -23,7 +23,7 @@ final class Workflow
 
     /** How an open case is being handled, set by a decision operation. */
     public const TRACKS = ['AGENSI' => 'Dipanjangkan ke agensi', 'SENDIRI' => 'Tindakan sendiri', 'MAKLUMAT' => 'Perlu maklumat lanjut'];
-    /** Decisions the case owner or a Super Admin may take; a Super Admin taking one on an unowned case becomes its owner. */
+    /** Decisions only the assigned officer may take. A Super Admin assigns the case to someone, or to themselves, first. */
     private const DECISION_OPS = ['refer' => 'AGENSI', 'self' => 'SENDIRI', 'need_info' => 'MAKLUMAT'];
 
     /** Operations only a Super Admin (manager) may perform. */
@@ -71,11 +71,17 @@ final class Workflow
         if (in_array($op, self::OWNER_OPS, true) && !$is_owner) {
             throw new WorkflowException('Tindakan ini hanya untuk pegawai yang ditugaskan. Super Admin boleh tugaskan kes kepada diri sendiri.');
         }
+        // Until someone is assigned, the case can be read, classified and assigned, nothing more.
+        if ($owner === 0 && !in_array($op, ['classify', 'assign'], true)) {
+            throw new WorkflowException('Tugaskan kes ini kepada pegawai atau diri sendiri dahulu sebelum diproses.');
+        }
         if ($op === 'comment' && !$actor['manager'] && !$is_owner) {
             throw new WorkflowException('Hanya Super Admin atau pegawai kes boleh menambah catatan.');
         }
-        if ((isset(self::DECISION_OPS[$op]) || $op === 'agency_update') && !$actor['manager'] && !$is_owner) {
-            throw new WorkflowException('Hanya pegawai kes atau Super Admin boleh membuat keputusan ini.');
+        if ((isset(self::DECISION_OPS[$op]) || $op === 'agency_update') && !$is_owner) {
+            throw new WorkflowException($owner === 0
+                ? 'Tugaskan kes ini kepada pegawai atau diri sendiri dahulu sebelum diproses.'
+                : 'Hanya pegawai yang ditugaskan boleh memproses kes ini.');
         }
         if ($status === self::CLOSED && !in_array($op, ['reopen', 'comment', 'assign'], true)) {
             throw new WorkflowException('Kes telah ditutup. Buka semula dahulu.');
@@ -210,11 +216,7 @@ final class Workflow
                 if (empty($case['first_action_at'])) {
                     $set['first_action_at'] = $now;
                 }
-                if ($owner === 0) {
-                    $set += ['owner_id' => (int) $actor['id'], 'assigned_at' => $now];
-                    $is_owner = true;
-                }
-                if ($is_owner && empty($case['accepted_at'])) {
+                if (empty($case['accepted_at'])) {
                     $set['accepted_at'] = $now;
                 }
                 if (isset($input['next_action'])) {
