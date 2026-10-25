@@ -113,8 +113,16 @@ final class Agencies
              LEFT JOIN ' . Schema::table('agency_list') . ' l ON l.id = r.agency_id WHERE r.case_id = %d ORDER BY r.id DESC',
             $case_id
         ), ARRAY_A);
+        $mail = [];
+        if ($rows) {
+            $ids = implode(',', array_map(static fn($r) => (int) $r['id'], $rows));
+            foreach ($wpdb->get_results('SELECT referral_id, state, attempts, last_error, sent_at, updated_at FROM ' . Schema::table('mail_queue') . " WHERE referral_id IN ($ids) ORDER BY id", ARRAY_A) as $m) {
+                $mail[(int) $m['referral_id']] = Mailer::status($m);
+            }
+        }
         return array_map(static fn(array $r): array => [
             'id' => (int) $r['id'],
+            'mail' => $mail[(int) $r['id']] ?? null,
             'agency_id' => (int) $r['agency_id'],
             'agency_name' => $r['agency_name'] ?? 'Agensi #' . $r['agency_id'],
             'agency_email' => $r['agency_email'],

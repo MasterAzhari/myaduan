@@ -306,7 +306,8 @@ final class Cases
             'events' => array_map(static fn(array $e): array => [
                 'id' => (int) $e['id'],
                 'actor_id' => (int) $e['actor_id'],
-                'actor_name' => (int) $e['actor_id'] ? ($names[(int) $e['actor_id']] ?? 'Pengguna #' . $e['actor_id']) : 'Sistem',
+                'actor_name' => (int) $e['actor_id'] ? ($names[(int) $e['actor_id']] ?? 'Pengguna #' . $e['actor_id'])
+                    : ($e['event'] === 'AGENCY_REPLY' ? (string) (json_decode((string) $e['changes'], true)['sender'] ?? 'Agensi') : 'Sistem'),
                 'event' => $e['event'],
                 'status_from' => $e['status_from'],
                 'status_to' => $e['status_to'],
@@ -427,7 +428,7 @@ final class Cases
         }
         do_action('myaduan_case_operated', $id, $op, $actor, $row['status'], $result['status'], $changes);
         foreach ($referred as $agency) {
-            Mailer::queue_referral($id, $agency, $result['note'], $request_id);
+            Mailer::queue_referral($id, $agency, $result['note'], $request_id, (string) $actor['name']);
         }
         return $this->get($actor, $id, false);
     }
@@ -446,6 +447,7 @@ final class Cases
                 'case_id' => $case_id, 'agency_id' => $agency_id, 'status' => Agencies::STATUSES[0], 'note' => $note,
                 'actor_id' => $actor_id, 'created_at' => $now, 'updated_at' => $now,
             ]);
+            $agency['referral_id'] = (int) $this->db->insert_id;
             $out[] = $agency;
         }
         return $out;

@@ -222,3 +222,13 @@ tr.inactive td { color: var(--muted); }
 .pw-wrap { display: flex; gap: 6px; align-items: stretch; }
 .pw-wrap input { flex: 1; min-width: 0; }
 .pw-wrap .pw-toggle { flex: none; }
+
+/* e-mail status */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.chip { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink); text-decoration: none; font-size: .88rem; }
+.chip.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+.mail-pending, .mail-sending { background: #fff4d6; color: #7a5a00; }
+.mail-sent { background: #e6f4ea; color: #137333; }
+.mail-failed, .mail-bounced { background: #fde7e9; color: #a50e0e; }
+.two-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; margin-top: 16px; }
+.referrals small { display: block; }

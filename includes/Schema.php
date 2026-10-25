@@ -165,11 +165,15 @@ final class Schema
   state varchar(12) NOT NULL DEFAULT 'pending',
   attempts tinyint(3) unsigned NOT NULL DEFAULT 0,
   last_error varchar(255) DEFAULT NULL,
+  referral_id bigint(20) unsigned DEFAULT NULL,
+  sent_at datetime DEFAULT NULL,
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,
   PRIMARY KEY  (id),
   UNIQUE KEY dedupe_key (dedupe_key),
-  KEY state (state,id)
+  KEY state (state,id),
+  KEY referral_id (referral_id),
+  KEY case_id (case_id)
 ) $c;",
             "CREATE TABLE {$t('notifications')} (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
