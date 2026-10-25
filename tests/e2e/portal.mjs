@@ -69,6 +69,15 @@ await desk.locator('.stat', { hasText: 'Belum dikelaskan' }).click();
 await desk.locator(`a.ref`, { hasText: created.reference }).waitFor();
 await desk.screenshot({ path: `${SHOTS}/p1-senarai.png`, fullPage: true });
 
+/* ---- Super Admin: taman/kampung list ---- */
+await desk.locator('.nav a', { hasText: 'Kawasan' }).click();
+await desk.locator('h1', { hasText: 'Kawasan' }).waitFor();
+await desk.locator('.chip', { hasText: 'Sungai Tua' }).click();
+await desk.locator('textarea[name=names]').fill('Taman Melati E2E\nKampung Changkat E2E');
+await desk.locator('form button[type=submit]', { hasText: 'Tambah' }).click();
+await desk.locator('tbody tr', { hasText: 'Kampung Changkat E2E' }).waitFor();
+await desk.screenshot({ path: `${SHOTS}/p1b-kawasan.png`, fullPage: true });
+await desk.goto(BASE + '/adminaduan/#/kes?flag=open');
 await desk.locator('a.ref', { hasText: created.reference }).click();
 await desk.locator('.case-head').waitFor();
 assert(await desk.getByText('Siti binti Ahmad').isVisible(), 'nama pengadu dipapar untuk Super Admin');
@@ -76,6 +85,11 @@ assert(await desk.locator('.photos img').evaluate((img) => img.complete && img.n
 await desk.locator('[data-op=screen]').click();
 await desk.locator('select[name=category_code]').selectOption('A04');
 await desk.locator('select[name=dun_slug]').selectOption('sungai-tua');
+assert((await desk.locator('select[name=area_id] option').allTextContents()).includes('Taman Melati E2E'), 'senarai taman ikut DUN');
+desk.once('dialog', (d) => d.accept('Taman Baru E2E'));
+await desk.locator('.add-area').click();
+await desk.waitForFunction(() => document.querySelector('select[name=area_id]').selectedOptions[0]?.textContent === 'Taman Baru E2E');
+assert(true, 'taman baru ditambah terus dari borang kes dan dipilih');
 await desk.locator('select[name=priority]').selectOption('SEGERA');
 const ownerOptions = await desk.locator('select[name=owner_id] option').allTextContents();
 assert(ownerOptions.includes('Encik Pegawai Lampu'), 'pegawai kategori Lampu Jalan disenaraikan');
@@ -84,6 +98,8 @@ assert(await desk.locator('.op-form button[type=submit]').textContent() === 'Sim
 await desk.locator('.op-form button[type=submit]').click();
 await desk.locator('.timeline li', { hasText: 'Ditugaskan' }).waitFor();
 assert(await statusOf(desk) === 'DALAM SEMAKAN', 'status DALAM SEMAKAN selepas ditugaskan');
+const assigned = await desk.locator('.timeline li', { hasText: 'Ditugaskan' }).first().textContent();
+assert(assigned.includes('Taman/kampung: Taman Baru E2E') && !assigned.includes('(kosong)'), 'medan baru dipapar tanpa "(kosong) →"');
 await desk.screenshot({ path: `${SHOTS}/p2-ditugaskan.png`, fullPage: true });
 
 /* ---- Super Admin: add a user ---- */

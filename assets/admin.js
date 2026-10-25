@@ -161,7 +161,7 @@
     const links = [];
     if (me.can.work || me.can.manage) links.push(['#/kes', 'Senarai kes', 'kes']);
     else links.push(['#/ringkasan', 'Ringkasan', 'ringkasan']);
-    if (me.can.manage) links.push(['#/agensi', 'Agensi', 'agensi'], ['#/emel', 'E-mel', 'emel'], ['#/pengguna', 'Pengguna', 'pengguna']);
+    if (me.can.manage) links.push(['#/agensi', 'Agensi', 'agensi'], ['#/kawasan', 'Kawasan', 'kawasan'], ['#/emel', 'E-mel', 'emel'], ['#/pengguna', 'Pengguna', 'pengguna']);
     view = h('main', { id: 'view', tabindex: '-1' });
     const NS = 'http://www.w3.org/2000/svg';
     const icon = document.createElementNS(NS, 'svg');
@@ -193,6 +193,7 @@
       else if (key === 'pengguna' && state.me.can.manage) await usersView();
       else if (key === 'agensi' && state.me.can.manage) await agenciesView();
       else if (key === 'emel' && state.me.can.manage) await mailView(query);
+      else if (key === 'kawasan' && state.me.can.manage) await areasView(query);
       else if (key === 'notifikasi') await notificationsView();
       else if (key === 'profil') profileView();
       else if (canCases) { state.lastList = location.hash || '#/kes'; await listView(query); }
@@ -208,7 +209,7 @@
     state.catalog = await api('/admin/catalog');
     state.cats = new Map(state.catalog.categories.map((c) => [c.code, c]));
     state.duns = new Map(state.catalog.areas.map((d) => [d.slug, d]));
-    state.areas = new Map(state.catalog.areas.flatMap((d) => d.localities.map((l) => [l.id, l.name])));
+    state.areas = new Map(Object.entries(state.catalog.locality_names || {}).map(([id, name]) => [Number(id), name]));
   }
 
   /* ---------- form controls ---------- */
@@ -445,13 +446,21 @@
     }
   }
 
+  // A field set for the first time shows only its new value; "old → new" is kept for real changes.
+  function changeLine(k, from, to) {
+    const empty = (v) => v == null || v === '' || (k === 'owner_id' && !Number(v));
+    if (empty(from)) return `${FIELD[k]}: ${changeValue(k, to)}`;
+    if (empty(to)) return `${FIELD[k]}: ${changeValue(k, from)} → dikosongkan`;
+    return `${FIELD[k]}: ${changeValue(k, from)} → ${changeValue(k, to)}`;
+  }
+
   function eventItem(e) {
     const changes = Object.entries(e.changes || {}).filter(([k]) => FIELD[k]);
     return h('li', {},
       h('div', { class: 'ev-head' }, h('strong', {}, EVENT[e.event] || e.event), h('span', { class: 'muted' }, ` · ${e.actor_name} · ${formatDate(e.created_at)}`)),
       e.status_from && e.status_to && e.status_from !== e.status_to ? h('div', { class: 'small' }, statusBadge(e.status_from), ' → ', statusBadge(e.status_to)) : null,
       changes.length ? h('ul', { class: 'changes' }, changes.map(([k, [from, to]]) => h('li', {},
-        k === 'gambar' ? `${to} gambar dilampirkan` : `${FIELD[k]}: ${changeValue(k, from)} → ${changeValue(k, to)}`))) : null,
+        k === 'gambar' ? `${to} gambar dilampirkan` : changeLine(k, from, to)))) : null,
       e.event === 'AGENCY_REPLY' && e.changes?.subject ? h('small', { class: 'muted' }, `${e.changes.email || ''} · ${e.changes.subject}`) : null,
       e.note ? h('p', { class: 'note' }, e.note) : null);
   }
@@ -671,12 +680,28 @@
     const submit = () => form.querySelector('button[type=submit]');
 
     const fillAreas = (keep) => {
-      const list = state.duns.get(dun.value)?.localities || [];
+      const list = [...(state.duns.get(dun.value)?.localities || [])];
+      // A taman the Super Admin has since hidden stays on the case that already has it.
+      if (c.area_id && dun.value === c.dun_slug && !list.some((l) => l.id === c.area_id)) {
+        list.unshift({ id: c.area_id, name: (state.areas.get(c.area_id) || '#' + c.area_id) + ' (disembunyikan)' });
+      }
       area.replaceChildren(h('option', { value: '' }, list.length ? 'Tidak pasti / pilih' : 'Senarai taman belum dimasukkan'),
         ...list.map((l) => h('option', { value: String(l.id) }, l.name)));
       area.disabled = !list.length;
       area.value = keep && list.some((l) => String(l.id) === keep) ? keep : '';
+      if (addArea) addArea.hidden = !dun.value;
     };
+    // The Super Admin can add a missing taman without leaving the case.
+    const addArea = state.me.can.manage ? h('button', { class: 'link add-area', type: 'button', onclick: async () => {
+      const name = (prompt(`Nama taman/kampung baru dalam DUN ${dunName(dun.value)}:`) || '').trim();
+      if (!name) return;
+      try {
+        const r = await api('/admin/areas', { method: 'POST', body: { dun_slug: dun.value, names: name } });
+        await loadCatalog();
+        fillAreas(String(r.ids[0]));
+        toast(r.skipped ? 'Nama ini sudah ada dalam senarai dan telah dipilih.' : 'Taman/kampung ditambah dan dipilih.');
+      } catch (err) { toast(err.message, 'error'); }
+    } }, '+ Tambah taman/kampung baru') : null;
     const fillOwners = () => {
       const keep = owner.value || (c.owner_id ? String(c.owner_id) : '');
       const list = eligibleOfficers(cat.value);
@@ -697,7 +722,7 @@
     const form = opForm(c, [
       field('Tajuk', h('input', { name: 'title', value: c.title, maxlength: 150 })),
       field('Kategori', cat, { name: 'category_code' }),
-      h('div', { class: 'two' }, field('DUN', dun, { name: 'dun_slug' }), field('Taman/kampung', area, { name: 'area_id' })),
+      h('div', { class: 'two' }, field('DUN', dun, { name: 'dun_slug' }), h('div', {}, field('Taman/kampung', area, { name: 'area_id' }), addArea)),
       field('Keutamaan', select('priority', state.catalog.priorities.map((p) => ({ value: p, label: p })), c.priority)),
       field('Pegawai', owner, { name: 'owner_id', help: 'Hanya pegawai yang dibenarkan untuk kategori ini disenaraikan.' }),
       field('Catatan (pilihan)', textarea('note', '', { rows: 2 })),
@@ -1033,6 +1058,65 @@
       h('div', { class: 'card table-wrap' }, h('table', { class: 'users' },
         h('thead', {}, h('tr', {}, ['Agensi', 'E-mel', 'Status', ''].map((t) => h('th', { scope: 'col' }, t)))),
         h('tbody', {}, rows))));
+  }
+
+  /* ---------- areas (DUN → taman/kampung) ---------- */
+
+  async function areasView(query) {
+    view.replaceChildren(h('p', { class: 'loading' }, 'Memuatkan kawasan…'));
+    const duns = await api('/admin/areas');
+    const current = duns.find((d) => d.slug === query.dun) || duns[0];
+    const reload = async () => { await loadCatalog(); await areasView({ dun: current.slug }); };
+    const tabs = h('div', { class: 'chips' }, duns.map((d) => h('a', { class: 'chip' + (d.slug === current.slug ? ' active' : ''), href: '#/kawasan?dun=' + d.slug },
+      `${d.name} (${d.localities.filter((l) => l.active).length})`)));
+
+    const addForm = h('form', { class: 'card user-form', novalidate: true, onsubmit: async (e) => {
+      e.preventDefault();
+      showErrors(addForm);
+      await submitting(addForm, async () => {
+        try {
+          const r = await api('/admin/areas', { method: 'POST', body: { dun_slug: current.slug, names: addForm.elements.names.value } });
+          toast([`${r.added} ditambah`, r.restored ? `${r.restored} dipaparkan semula` : null, r.skipped ? `${r.skipped} sudah ada` : null].filter(Boolean).join(', ') + '.');
+          await reload();
+        } catch (err) { showErrors(addForm, err); }
+      });
+    } },
+      h('h2', {}, 'Tambah taman/kampung ke DUN ' + current.name),
+      field('Nama (satu nama satu baris)', textarea('names', '', { rows: 6, placeholder: 'Taman Melati\nKampung Changkat\nTaman Greenwood' }), { wide: true,
+        help: 'Boleh tampal terus dari Excel atau Word. Nama yang sudah ada akan dilangkau.' }),
+      h('p', { class: 'form-error', role: 'alert' }),
+      h('div', { class: 'form-actions' }, h('button', { class: 'btn', type: 'submit' }, 'Tambah')));
+
+    const filter = h('input', { type: 'search', placeholder: 'Cari taman/kampung', 'aria-label': 'Cari taman atau kampung' });
+    const rows = current.localities.map((l) => {
+      const save = async (body, msg) => {
+        try { await api('/admin/areas/' + l.id, { method: 'POST', body }); toast(msg); await reload(); } catch (err) { toast(err.message, 'error'); }
+      };
+      return h('tr', { class: l.active ? '' : 'inactive', 'data-q': l.name.toLowerCase() },
+        h('td', { 'data-label': 'Taman/kampung', class: 'main-col' }, h('span', { class: 'title' }, l.name)),
+        h('td', { 'data-label': 'Kes' }, String(l.cases)),
+        h('td', { 'data-label': 'Status' }, h('span', { class: 'badge ' + (l.active ? 'st-ok' : 'st-off') }, l.active ? 'Dipaparkan' : 'Disembunyikan')),
+        h('td', { 'data-label': '' },
+          h('button', { class: 'btn ghost small', type: 'button', onclick: () => {
+            const name = (prompt('Nama baru:', l.name) || '').trim();
+            if (name && name !== l.name) save({ name }, 'Nama dikemas kini.');
+          } }, 'Ubah nama'), ' ',
+          h('button', { class: 'btn ghost small', type: 'button', onclick: () => save({ active: !l.active }, l.active ? 'Disembunyikan dari pilihan.' : 'Dipaparkan semula.') },
+            l.active ? 'Sembunyi' : 'Papar')));
+    });
+    filter.addEventListener('input', () => {
+      const q = filter.value.trim().toLowerCase();
+      for (const r of rows) r.hidden = q !== '' && !r.dataset.q.includes(q);
+    });
+    view.replaceChildren(
+      h('div', { class: 'page-head' }, h('h1', {}, 'Kawasan')),
+      h('p', { class: 'muted small' }, 'Senarai taman dan kampung bagi setiap DUN, untuk dipilih semasa mengelaskan kes. Nama yang disembunyikan tidak lagi boleh dipilih, tetapi kekal pada kes lama.'),
+      tabs,
+      addForm,
+      current.localities.length ? h('div', { class: 'card' }, filter) : null,
+      h('div', { class: 'card table-wrap' }, current.localities.length ? h('table', { class: 'users' },
+        h('thead', {}, h('tr', {}, ['Taman/kampung', 'Kes', 'Status', ''].map((t) => h('th', { scope: 'col' }, t)))),
+        h('tbody', {}, rows)) : h('p', { class: 'muted' }, 'Belum ada taman/kampung untuk DUN ini.')));
   }
 
   /* ---------- e-mail log ---------- */

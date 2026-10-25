@@ -489,7 +489,9 @@ final class Cases
             throw new WorkflowException('DUN tidak sah.');
         }
         $area = array_key_exists('area_id', $set) ? $set['area_id'] : $row['area_id'];
-        if ($area !== null && $area !== '' && ($dun === null || !$this->catalog->locality_in_dun((int) $area, $dun))) {
+        // A case may keep a locality the Super Admin has since hidden.
+        $unchanged = $row['area_id'] !== null && (int) $area === (int) $row['area_id'] && $dun === $row['dun_slug'];
+        if ($area !== null && $area !== '' && !$unchanged && ($dun === null || !$this->catalog->locality_in_dun((int) $area, $dun))) {
             throw new WorkflowException('Taman/kampung tidak berada dalam DUN yang dipilih.');
         }
         $category = array_key_exists('category_code', $set) ? $set['category_code'] : $row['category_code'];
