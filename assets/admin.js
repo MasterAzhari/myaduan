@@ -594,15 +594,18 @@
       if (u.policy.mode === 'selected') return u.policy.codes.map(catName).join(', ');
       return '—';
     };
+    // Accounts waiting for a role go first, so they are not missed.
+    users.sort((a, b) => Number(!!b.needs_role) - Number(!!a.needs_role));
     const rows = users.map((u) => h('tr', { class: u.active ? '' : 'inactive' },
       h('td', { 'data-label': 'Nama', class: 'main-col' }, h('span', { class: 'title' }, u.name), h('small', {}, u.email),
         u.email_ok ? null : h('small', { class: 'bad-text' }, `Bukan e-mel @${cfg.staff_domain}. Sila tukar.`)),
       h('td', { 'data-label': 'Peranan' }, ROLE[u.role], u.site_admin ? h('small', {}, 'Pentadbir laman') : null),
       h('td', { 'data-label': 'Kategori', class: 'cats' }, policyText(u)),
       h('td', { 'data-label': 'Kes terbuka' }, String(u.open_cases)),
-      h('td', { 'data-label': 'Status' }, h('span', { class: 'badge ' + (u.active ? 'st-ok' : 'st-off') }, u.active ? 'Aktif' : 'Tidak aktif')),
+      h('td', { 'data-label': 'Status' }, u.needs_role ? h('span', { class: 'badge st-diterima' }, 'Perlu peranan')
+        : h('span', { class: 'badge ' + (u.active ? 'st-ok' : 'st-off') }, u.active ? 'Aktif' : 'Tidak aktif')),
       h('td', { 'data-label': '' }, u.site_admin ? h('small', { class: 'muted' }, 'Urus dalam WordPress')
-        : h('button', { class: 'btn ghost small', type: 'button', onclick: () => open(u) }, 'Ubah'))));
+        : h('button', { class: 'btn ' + (u.needs_role ? '' : 'ghost ') + 'small', type: 'button', onclick: () => open(u) }, u.needs_role ? 'Beri peranan' : 'Ubah'))));
 
     view.replaceChildren(
       h('div', { class: 'page-head' }, h('h1', {}, 'Pengguna'), h('button', { class: 'btn', type: 'button', onclick: () => open(null) }, '+ Tambah pengguna')),
@@ -665,7 +668,7 @@
         field('E-mel', h('input', { name: 'email', type: 'email', value: u?.email || '', autocomplete: 'off', required: true, placeholder: `nama@${cfg.staff_domain}` }),
           { help: `Mesti e-mel @${cfg.staff_domain}.` + (isNew ? ' Pautan tetapan kata laluan dihantar ke e-mel ini.' : '') })),
       roleBox, policyBox,
-      isNew ? null : h('label', { class: 'check field wide' }, h('input', { type: 'checkbox', name: 'active', checked: u.active }), 'Akaun aktif (boleh log masuk)'),
+      isNew ? null : h('label', { class: 'check field wide' }, h('input', { type: 'checkbox', name: 'active', checked: u.active || u.needs_role }), 'Akaun aktif (boleh log masuk)'),
       !isNew && u.open_cases ? h('p', { class: 'muted small' }, `Pengguna ini memegang ${u.open_cases} kes terbuka. Tugaskan semula kes tersebut sebelum menyahaktifkan atau membuang kategorinya.`) : null,
       h('p', { class: 'form-error', role: 'alert' }),
       h('div', { class: 'form-actions' },

@@ -64,6 +64,8 @@ Tetapan → MyAduan → **Import aduan dari Google Sheet lama**. Dalam Google Sh
 
 Akaun admin, Super Admin dan pegawai yang dicipta atau diubah dalam portal mesti guna e-mel `@myaduan.my`. E-mel notifikasi dan e-mel penghantar pun mesti @myaduan.my; alamat lain dibuang semasa simpan. Akaun lama dengan domain lain ditanda merah dalam senarai Pengguna dan perlu ditukar sebelum perubahan lain boleh disimpan.
 
+Akaun @myaduan.my yang dibuat dalam wp-admin tanpa peranan MyAduan pun keluar dalam senarai Pengguna (paling atas, "Perlu peranan"). Super Admin tekan **Beri peranan** untuk set peranan dan kategori terus dari portal.
+
 ### Kunci sulitan: WAJIB backup
 
 Nama, IC dan telefon pengadu disulitkan dengan kunci dalam `../myaduan-files/.myaduan-key`. **Kalau kunci hilang, data peribadi tak boleh dibaca lagi.** Simpan salinan kunci di tempat selamat (bukan dalam database).

@@ -11,7 +11,8 @@ if (!defined('ABSPATH')) {
  * MyAduan accounts managed from the portal by a Super Admin.
  *
  * Site administrators are listed but stay read-only here: they are managed in
- * WordPress itself. Deactivating removes the role (and every session) but keeps
+ * WordPress itself. Accounts with a staff e-mail but no MyAduan role (made in
+ * wp-admin, say) are listed too, so a Super Admin can give them a role here. Deactivating removes the role (and every session) but keeps
  * the account, so case history still shows who did what.
  */
 final class Users
@@ -27,7 +28,8 @@ final class Users
     {
         $ids = array_merge(
             get_users(['role__in' => array_merge(array_values(self::ROLES), ['administrator']), 'fields' => 'ID']),
-            get_users(['meta_key' => self::INACTIVE_META, 'fields' => 'ID'])
+            get_users(['meta_key' => self::INACTIVE_META, 'fields' => 'ID']),
+            get_users(['search' => '*@' . Settings::staff_domain(), 'search_columns' => ['user_email'], 'fields' => 'ID'])
         );
         $ids = array_values(array_unique(array_map('intval', $ids)));
         if (!$ids) {
@@ -84,7 +86,8 @@ final class Users
         $only_deactivate = array_keys($in) === ['active'] && !filter_var($in['active'], FILTER_VALIDATE_BOOLEAN);
         $email = $only_deactivate ? $current['email'] : $this->email($in['email'] ?? $current['email'], $id, $errors);
         $role = array_key_exists('role', $in) ? $this->role($in['role'], $errors) : $current['role'];
-        $active = array_key_exists('active', $in) ? filter_var($in['active'], FILTER_VALIDATE_BOOLEAN) : $current['active'];
+        // An account getting its first role turns active unless told otherwise.
+        $active = array_key_exists('active', $in) ? filter_var($in['active'], FILTER_VALIDATE_BOOLEAN) : ($current['active'] || $current['role'] === 'none');
         if ($role === 'none') {
             $errors['role'] = 'Pilih peranan.';
         }
@@ -163,6 +166,7 @@ final class Users
             'email' => $u->user_email,
             'role' => $role,
             'active' => $site_admin || ($inactive === '' && $role !== 'none'),
+            'needs_role' => !$site_admin && $role === 'none',
             'site_admin' => $site_admin,
             'email_ok' => Settings::is_staff_email($u->user_email),
             'policy' => Access::normalize_policy(get_user_meta($u->ID, Access::POLICY_META, true)),
@@ -172,7 +176,9 @@ final class Users
 
     private function is_listed(\WP_User $u): bool
     {
-        return (bool) array_intersect($u->roles, array_values(self::ROLES)) || get_user_meta($u->ID, self::INACTIVE_META, true) !== '';
+        return (bool) array_intersect($u->roles, array_values(self::ROLES))
+            || get_user_meta($u->ID, self::INACTIVE_META, true) !== ''
+            || Settings::is_staff_email($u->user_email);
     }
 
     /** @return array<int, list<?string>> open case categories per owner */
@@ -210,7 +216,9 @@ final class Users
         } elseif (!Settings::is_staff_email($email)) {
             $errors['email'] = 'Akaun MyAduan mesti guna e-mel @' . Settings::staff_domain() . '.';
         } elseif (($owner = email_exists($email)) && (int) $owner !== $self_id) {
-            $errors['email'] = 'E-mel ini sudah digunakan oleh akaun lain.';
+            $errors['email'] = $self_id
+                ? 'E-mel ini sudah digunakan oleh akaun lain.'
+                : 'Akaun dengan e-mel ini sudah wujud. Cari namanya dalam senarai di bawah dan tekan Ubah untuk beri peranan.';
         }
         return $email;
     }
