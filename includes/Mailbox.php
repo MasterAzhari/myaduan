@@ -173,8 +173,8 @@ final class Mailbox
         if (!$is_report) {
             return null;
         }
-        // A delay warning is not a bounce: the server is still trying.
-        if (preg_match('/^Action:\s*delayed/mi', $raw) && !preg_match('/^Action:\s*failed/mi', $raw)) {
+        // Only a failure is a bounce: delay, delivered, relayed and expanded reports are not.
+        if (preg_match('/^Action:/mi', $raw) ? !preg_match('/^Action:\s*failed/mi', $raw) : preg_match('/^Status:\s*2\./mi', $raw)) {
             return null;
         }
         $reason = '';

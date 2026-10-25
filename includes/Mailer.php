@@ -118,18 +118,30 @@ final class Mailer
              FROM $q m LEFT JOIN " . Schema::table('cases') . " c ON c.id = m.case_id $where ORDER BY m.id DESC LIMIT %d",
             max(1, min(500, $limit))
         ), ARRAY_A);
-        return array_map(static fn(array $r): array => [
+        return array_map(static function (array $r): array {
+            $ack = str_starts_with((string) $r['dedupe_key'], self::ACK);
+            if ($ack && $r['last_error']) {
+                // Mail server errors and bounce reasons often quote the recipient: the complainant's address.
+                $r['last_error'] = preg_replace('/[^\s<>"\'(),;:]+@[^\s<>"\'(),;:]+/', '[e-mel pengadu]', (string) $r['last_error']);
+            }
+            return self::log_row($r, $ack);
+        }, $rows);
+    }
+
+    private static function log_row(array $r, bool $ack): array
+    {
+        return [
             'id' => (int) $r['id'],
             'kind' => self::kind((string) $r['dedupe_key']),
-            'recipient' => str_starts_with((string) $r['dedupe_key'], self::ACK) ? 'Pengadu' : $r['recipient'],
+            'recipient' => $ack ? 'Pengadu' : $r['recipient'],
             'subject' => $r['subject'],
             'case_id' => $r['case_id'] ? (int) $r['case_id'] : null,
             'reference' => $r['reference'],
             'attempts' => (int) $r['attempts'],
             'created_at' => Cases::iso($r['created_at']),
             'status' => self::status($r),
-            'can_retry' => in_array($r['state'], ['failed', 'bounced'], true) && !str_starts_with((string) $r['dedupe_key'], self::ACK),
-        ], $rows);
+            'can_retry' => in_array($r['state'], ['failed', 'bounced'], true) && !$ack,
+        ];
     }
 
     /** @return array<string,int> number of messages in each state */
