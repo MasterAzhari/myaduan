@@ -156,37 +156,57 @@
 
   let view;
   let bell;
-  function shell() {
-    const me = state.me;
-    const links = [];
-    if (me.can.work || me.can.manage) links.push(['#/kes', 'Senarai kes', 'kes']);
-    else links.push(['#/ringkasan', 'Ringkasan', 'ringkasan']);
-    if (me.can.manage) links.push(['#/agensi', 'Agensi', 'agensi'], ['#/kawasan', 'Kawasan', 'kawasan'], ['#/emel', 'E-mel', 'emel'], ['#/pengguna', 'Pengguna', 'pengguna']);
-    view = h('main', { id: 'view', tabindex: '-1' });
+  const ICONS = {
+    kes: 'M4 5h16v2H4V5Zm0 6h16v2H4v-2Zm0 6h10v2H4v-2Z',
+    ringkasan: 'M4 20V10h3v10H4Zm6.5 0V4h3v16h-3ZM17 20v-7h3v7h-3Z',
+    agensi: 'M3 21V8l9-5 9 5v13h-7v-5h-4v5H3Zm4-9h2v-2H7v2Zm0 4h2v-2H7v2Zm8-4h2v-2h-2v2Zm0 4h2v-2h-2v2Z',
+    kawasan: 'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z',
+    emel: 'M3 5h18v14H3V5Zm2 2.2v.3l7 4.5 7-4.5v-.3H5Zm0 2.7V17h14V9.9l-7 4.5-7-4.5Z',
+    pengguna: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7.5 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM1 20c0-3.3 3.6-6 8-6s8 2.7 8 6v1H1v-1Zm17.5 1v-1c0-1.9-.9-3.5-2.3-4.7 3.4.2 6.3 2.2 6.3 4.7v1h-4Z',
+    notifikasi: 'M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z',
+    profil: 'M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm-9 9c0-4 4-7 9-7s9 3 9 7v1H3v-1Z',
+  };
+  function svgIcon(key, size = 22) {
     const NS = 'http://www.w3.org/2000/svg';
     const icon = document.createElementNS(NS, 'svg');
     const path = document.createElementNS(NS, 'path');
-    for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', width: '22', height: '22', 'aria-hidden': 'true' })) icon.setAttribute(k, v);
+    for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', width: String(size), height: String(size), 'aria-hidden': 'true' })) icon.setAttribute(k, v);
     path.setAttribute('fill', 'currentColor');
-    path.setAttribute('d', 'M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z');
+    path.setAttribute('d', ICONS[key]);
     icon.append(path);
-    bell = h('a', { class: 'bell', href: '#/notifikasi', 'data-key': 'notifikasi', 'aria-label': 'Notifikasi' }, icon, h('span', { class: 'count', hidden: true }));
+    return icon;
+  }
+  const initials = (name) => String(name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+
+  function shell() {
+    const me = state.me;
+    const links = [];
+    if (me.can.work || me.can.manage) links.push(['#/kes', 'Senarai kes', 'kes', 'Kes']);
+    else links.push(['#/ringkasan', 'Ringkasan', 'ringkasan', 'Ringkasan']);
+    if (me.can.manage) links.push(['#/agensi', 'Agensi', 'agensi'], ['#/kawasan', 'Kawasan', 'kawasan'], ['#/emel', 'E-mel', 'emel'], ['#/pengguna', 'Pengguna', 'pengguna']);
+    // On a phone the menu sits at the bottom, in thumb reach. With one page only, it also carries Notifikasi and Profil.
+    const tabs = links.length > 1 ? links : [...links, ['#/notifikasi', 'Notifikasi', 'notifikasi'], ['#/profil', 'Profil', 'profil']];
+    view = h('main', { id: 'view', tabindex: '-1' });
+    bell = h('a', { class: 'bell', href: '#/notifikasi', 'data-key': 'notifikasi', 'aria-label': 'Notifikasi' }, svgIcon('notifikasi'), h('span', { class: 'count', hidden: true }));
     app.replaceChildren(
       h('header', { class: 'top' },
         h('a', { class: 'brand', href: '#/' }, cfg.logo ? h('img', { class: 'logo-img', src: cfg.logo, alt: '', width: '38', height: '38' }) : h('span', { class: 'logo', 'aria-hidden': 'true' }, 'MA'), h('span', {}, 'MyAduan', h('small', {}, 'Portal Admin'))),
         h('nav', { class: 'nav', 'aria-label': 'Menu utama' }, links.map(([href, label, key]) => h('a', { href, 'data-key': key }, label))),
         h('div', { class: 'who' },
           bell,
-          h('span', { class: 'who-name' }, me.name, h('small', {}, ROLE[me.role])),
-          h('a', { href: '#/profil', 'data-key': 'profil' }, 'Profil'),
-          h('a', { href: cfg.logout, onclick: logout }, 'Log keluar'))),
-      view);
+          h('a', { class: 'me', href: '#/profil', 'data-key': 'profil', title: 'Profil' },
+            h('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(me.name)),
+            h('span', { class: 'who-name' }, me.name, h('small', {}, ROLE[me.role]))),
+          h('a', { class: 'logout', href: cfg.logout, onclick: logout }, 'Log keluar'))),
+      view,
+      h('nav', { class: 'tabbar', 'aria-label': 'Menu' }, tabs.map(([href, label, key, short]) => h('a', { href, 'data-key': key },
+        svgIcon(key), h('span', {}, short || label), key === 'notifikasi' ? h('span', { class: 'count', hidden: true }) : null))));
   }
 
   async function route() {
     const { parts, query } = parseHash();
     const key = parts[0] || '';
-    for (const a of app.querySelectorAll('.nav a, a.bell, .who a[data-key]')) a.classList.toggle('active', a.dataset.key === key);
+    for (const a of app.querySelectorAll('.nav a, .tabbar a, a.bell, .who a[data-key]')) a.classList.toggle('active', a.dataset.key === key);
     const canCases = state.me.can.work || state.me.can.manage;
     try {
       if (key === 'kes' && parts[1] && canCases) await caseView(parseInt(parts[1], 10));
@@ -305,12 +325,15 @@
     } else {
       ownerOpts.push({ value: String(me.id), label: 'Kes saya sahaja' });
     }
+    // On a phone only the search box shows until "Tapisan" is pressed; the count says how many other filters are on.
+    const extra = ['ic', 'status', 'flag', 'category', 'dun', 'owner', 'from', 'to'].filter((k) => query[k]).length;
     const f = h('form', { class: 'filters card', role: 'search', onsubmit: (e) => {
       e.preventDefault();
       const q = Object.fromEntries(new FormData(f));
       location.hash = hashFor('/kes', q);
     } },
       field('Cari', h('input', { name: 'q', type: 'search', value: query.q || '', placeholder: 'No. rujukan, tajuk atau lokasi' }), { wide: true }),
+      h('div', { class: 'more-fields' },
       field('No. KP pengadu', h('input', { name: 'ic', inputmode: 'numeric', value: query.ic || '', placeholder: '880512-10-5432', autocomplete: 'off' })),
       field('Status', select('status', [{ value: '', label: 'Semua status' }, ...state.catalog.statuses.map((s) => ({ value: s, label: s }))], query.status)),
       field('Keadaan', select('flag', [{ value: '', label: 'Semua' }, ...Object.entries(FLAGS).map(([value, label]) => ({ value, label }))], query.flag)),
@@ -318,9 +341,13 @@
       field('DUN', select('dun', dunOptions([{ value: '', label: 'Semua DUN' }, { value: 'none', label: 'Belum ditetapkan' }]), query.dun)),
       field('Pegawai', select('owner', ownerOpts, query.owner)),
       field('Dari', h('input', { name: 'from', type: 'date', value: query.from || '' })),
-      field('Hingga', h('input', { name: 'to', type: 'date', value: query.to || '' })),
+      field('Hingga', h('input', { name: 'to', type: 'date', value: query.to || '' }))),
       h('div', { class: 'filter-actions' },
         h('button', { class: 'btn', type: 'submit' }, 'Tapis'),
+        h('button', { class: 'btn ghost filter-toggle', type: 'button', 'aria-expanded': 'false', onclick: (e) => {
+          const open = f.classList.toggle('open');
+          e.currentTarget.setAttribute('aria-expanded', String(open));
+        } }, 'Tapisan' + (extra ? ` (${extra})` : '')),
         h('a', { class: 'btn ghost', href: '#/kes' }, 'Set semula')));
 
     const rows = list.items.map((c) => h('tr', { class: 'row', onclick: (e) => { if (!e.target.closest('a')) location.hash = '#/kes/' + c.id; } },
@@ -905,16 +932,20 @@
           h('dt', {}, 'Peranan'), h('dd', {}, ROLE[me.role])),
         h('p', { class: 'muted small' }, me.can.manage ? 'Nama dan e-mel diubah di halaman Pengguna.' : 'Untuk menukar nama atau e-mel, hubungi Super Admin.')),
       form,
-      h('p', { class: 'muted small' }, 'Lupa kata laluan? Minta Super Admin tetapkan kata laluan baru untuk anda.'));
+      h('p', { class: 'muted small' }, 'Lupa kata laluan? Minta Super Admin tetapkan kata laluan baru untuk anda.'),
+      h('div', { class: 'card logout-card' },
+        h('div', {}, h('strong', {}, 'Log keluar'), h('small', {}, 'Tamatkan sesi di peranti ini.')),
+        h('a', { class: 'btn ghost', href: cfg.logout, onclick: logout }, 'Log keluar')));
   }
 
   /* ---------- notifications ---------- */
 
   function setUnread(n) {
-    const el = bell?.querySelector('.count');
-    if (!el) return;
-    el.hidden = !n;
-    el.textContent = n > 99 ? '99+' : String(n);
+    if (!bell) return;
+    for (const el of app.querySelectorAll('.count')) {
+      el.hidden = !n;
+      el.textContent = n > 99 ? '99+' : String(n);
+    }
     bell.setAttribute('aria-label', n ? `Notifikasi (${n} belum dibaca)` : 'Notifikasi');
     if ('setAppBadge' in navigator) (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
   }
@@ -1113,7 +1144,7 @@
       h('p', { class: 'muted small' }, 'Senarai taman dan kampung bagi setiap DUN, untuk dipilih semasa mengelaskan kes. Nama yang disembunyikan tidak lagi boleh dipilih, tetapi kekal pada kes lama.'),
       tabs,
       addForm,
-      current.localities.length ? h('div', { class: 'card' }, filter) : null,
+      current.localities.length ? h('div', { class: 'card' }, filter) : '',
       h('div', { class: 'card table-wrap' }, current.localities.length ? h('table', { class: 'users' },
         h('thead', {}, h('tr', {}, ['Taman/kampung', 'Kes', 'Status', ''].map((t) => h('th', { scope: 'col' }, t)))),
         h('tbody', {}, rows)) : h('p', { class: 'muted' }, 'Belum ada taman/kampung untuk DUN ini.')));

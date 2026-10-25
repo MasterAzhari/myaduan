@@ -187,7 +187,7 @@ final class Portal
         $json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         $ver = rawurlencode(MYADUAN_VERSION);
         return '<!doctype html><html lang="ms"><head><meta charset="utf-8">'
-            . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            . '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
             . '<meta name="robots" content="noindex, nofollow">'
             . self::icon_link()
             . self::pwa_head()

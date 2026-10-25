@@ -72,7 +72,9 @@ await desk.screenshot({ path: `${SHOTS}/p1-senarai.png`, fullPage: true });
 /* ---- Super Admin: taman/kampung list ---- */
 await desk.locator('.nav a', { hasText: 'Kawasan' }).click();
 await desk.locator('h1', { hasText: 'Kawasan' }).waitFor();
-await desk.locator('.chip', { hasText: 'Sungai Tua' }).click();
+// The chip re-renders the page, so wait for that before typing.
+await Promise.all([desk.waitForResponse((r) => r.url().includes('/admin/areas')), desk.locator('.chip', { hasText: 'Sungai Tua' }).click()]);
+await desk.locator('textarea[name=names]').waitFor();
 await desk.locator('textarea[name=names]').fill('Taman Melati E2E\nKampung Changkat E2E');
 await desk.locator('form button[type=submit]', { hasText: 'Tambah' }).click();
 await desk.locator('tbody tr', { hasText: 'Kampung Changkat E2E' }).waitFor();
@@ -135,7 +137,7 @@ await desk.screenshot({ path: `${SHOTS}/p4-pengguna.png`, fullPage: true });
   await p2.getByRole('button', { name: 'Tukar kata laluan' }).click();
   await p2.locator('h2', { hasText: 'Kata laluan ditukar' }).waitFor();
   await p2.waitForLoadState('load');
-  await p2.locator('.who-name').waitFor({ timeout: 10000 });
+  await p2.locator('.avatar').waitFor({ timeout: 10000 });
   await c2.close();
   const c3 = await browser.newContext();
   const p3 = await c3.newPage();
