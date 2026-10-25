@@ -23,8 +23,9 @@ final class Portal
         add_action('login_head', [self::class, 'login_brand']);
         add_filter('login_headerurl', static fn() => home_url('/'));
         add_filter('login_headertext', static fn() => 'MyAduan · Parlimen Gombak');
-        // Staff ask the Super Admin for a new password instead of an e-mailed link.
-        add_filter('lost_password_html_link', static fn() => '<span class="myaduan-lost">Lupa kata laluan? Minta Super Admin MyAduan tetapkan kata laluan baru.</span>');
+        // Staff ask the Super Admin for a new password; the e-mailed reset stays for site administrators.
+        add_filter('lost_password_html_link', static fn(string $link): string => $link
+            . '<br><span class="myaduan-lost">Staf MyAduan: lupa kata laluan? Minta Super Admin tetapkan kata laluan baru.</span>');
     }
 
     /** Officers log in through wp-login.php, so it shows the MyAduan logo instead of the WordPress one. */

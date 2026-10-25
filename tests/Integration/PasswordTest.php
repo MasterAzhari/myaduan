@@ -117,7 +117,9 @@ final class PasswordTest extends TestCase
         if ($admin) {
             $this->assertTrue(apply_filters('allow_password_reset', true, (int) $admin[0]), 'site admins keep the WordPress reset');
         }
-        $this->assertStringContainsString('Minta Super Admin', apply_filters('lost_password_html_link', '<a href="#">Lost your password?</a>'));
+        $link = apply_filters('lost_password_html_link', '<a href="#">Lost your password?</a>');
+        $this->assertStringContainsString('Minta Super Admin', $link);
+        $this->assertStringContainsString('Lost your password?', $link, 'site admins still reach the WordPress reset');
     }
 
     public function test_profile_cannot_move_staff_off_the_domain(): void
