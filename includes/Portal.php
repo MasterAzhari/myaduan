@@ -53,8 +53,19 @@ final class Portal
 
     public static function maybe_serve(): void
     {
-        if (!self::matches(self::request_path((string) ($_SERVER['REQUEST_URI'] ?? '')))) {
+        $path = self::request_path((string) ($_SERVER['REQUEST_URI'] ?? ''));
+        if (!self::matches($path)) {
             return;
+        }
+        $file = substr($path, strlen(trim(Settings::get('portal_path'), '/')) + 1);
+        if ($file === 'sw.js' || $file === 'manifest.webmanifest') {
+            $r = $file === 'sw.js' ? self::service_worker() : self::manifest();
+            status_header(200);
+            header('Content-Type: ' . $r['type']);
+            header('Cache-Control: no-cache');
+            header('X-Content-Type-Options: nosniff');
+            echo $r['body'];
+            exit;
         }
         $r = self::response(wp_get_current_user());
         status_header($r['status']);
@@ -121,6 +132,44 @@ final class Portal
         return $user->exists() && user_can($user, Access::CAP_ACCESS) && !user_can($user, 'edit_posts') && !user_can($user, 'manage_options');
     }
 
+    /** @return array{type:string, body:string} */
+    public static function service_worker(): array
+    {
+        $js = (string) file_get_contents(MYADUAN_DIR . '/assets/sw.js');
+        return ['type' => 'application/javascript; charset=utf-8', 'body' => str_replace("'__ICON__'", wp_json_encode(plugins_url('assets/img/icon-192.png', MYADUAN_FILE)), $js)];
+    }
+
+    /** Lets staff install the portal on a phone ("Add to Home Screen"). */
+    public static function manifest(): array
+    {
+        $portal = Settings::portal_url();
+        $icon = static fn(int $size): array => ['src' => plugins_url("assets/img/icon-$size.png", MYADUAN_FILE), 'sizes' => "{$size}x$size", 'type' => 'image/png', 'purpose' => 'any maskable'];
+        return ['type' => 'application/manifest+json', 'body' => (string) wp_json_encode([
+            'name' => 'MyAduan Admin · Parlimen Gombak',
+            'short_name' => 'MyAduan',
+            'description' => 'Portal admin MyAduan: kes, tugasan dan notifikasi.',
+            'id' => $portal,
+            'start_url' => $portal,
+            'scope' => $portal,
+            'display' => 'standalone',
+            'background_color' => '#ffffff',
+            'theme_color' => '#b3122b',
+            'lang' => 'ms',
+            'icons' => [$icon(192), $icon(512)],
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)];
+    }
+
+    /** Head tags that make the portal installable. */
+    private static function pwa_head(): string
+    {
+        $base = Settings::portal_url();
+        return '<link rel="manifest" href="' . esc_url($base . 'manifest.webmanifest') . '">'
+            . '<meta name="theme-color" content="#b3122b">'
+            . '<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">'
+            . '<meta name="apple-mobile-web-app-title" content="MyAduan">'
+            . '<link rel="apple-touch-icon" href="' . esc_url(plugins_url('assets/img/icon-192.png', MYADUAN_FILE)) . '">';
+    }
+
     private static function app_page(\WP_User $user): string
     {
         $assets = plugins_url('assets/', MYADUAN_FILE);
@@ -133,6 +182,7 @@ final class Portal
             'site' => get_bloginfo('name'),
             'version' => MYADUAN_VERSION,
             'staff_domain' => Settings::staff_domain(),
+            'sw' => Settings::portal_url() . 'sw.js',
             'logo' => Settings::logo_url(),
         ];
         $json = wp_json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
@@ -141,6 +191,7 @@ final class Portal
             . '<meta name="viewport" content="width=device-width, initial-scale=1">'
             . '<meta name="robots" content="noindex, nofollow">'
             . self::icon_link()
+            . self::pwa_head()
             . '<title>Portal Admin MyAduan</title>'
             . '<link rel="stylesheet" href="' . esc_url($assets . 'admin.css?ver=' . $ver) . '">'
             . '<script type="application/json" id="myaduan-config">' . $json . '</script>'
@@ -158,6 +209,7 @@ final class Portal
         return '<!doctype html><html lang="ms"><head><meta charset="utf-8">'
             . '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">'
             . self::icon_link()
+            . self::pwa_head()
             . '<title>Log masuk · MyAduan</title>'
             . '<noscript><meta http-equiv="refresh" content="0;url=' . esc_url(wp_login_url(Settings::portal_url())) . '"></noscript>'
             . '<link rel="stylesheet" href="' . esc_url($assets . 'admin.css?ver=' . rawurlencode(MYADUAN_VERSION)) . '">'

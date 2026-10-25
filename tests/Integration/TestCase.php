@@ -22,7 +22,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
     protected function setUp(): void
     {
         global $wpdb;
-        foreach (['cases', 'events', 'submissions', 'access_log', 'attachments', 'agencies'] as $t) {
+        foreach (['cases', 'events', 'submissions', 'access_log', 'attachments', 'agencies', 'notifications', 'push_subscriptions', 'mail_queue'] as $t) {
             $wpdb->query('TRUNCATE TABLE ' . Schema::table($t));
         }
         $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '\\_transient%myaduan\\_rl\\_%'");

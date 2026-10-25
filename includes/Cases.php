@@ -182,6 +182,8 @@ final class Cases
                 'open' => $open,
                 'not_accepted' => "$open AND c.owner_id > 0 AND c.accepted_at IS NULL",
                 'overdue' => $this->db->prepare("$open AND c.followup_at IS NOT NULL AND c.followup_at < %s", self::now()),
+                'agency' => "$open AND c.track = 'AGENSI'",
+                'need_info' => "$open AND c.track = 'MAKLUMAT'",
                 default => throw new WorkflowException('Penapis tidak sah.', 'invalid_filter', 400),
             };
         }
@@ -208,7 +210,7 @@ final class Cases
         $offset = ($page - 1) * self::PER_PAGE;
         $rows = $this->db->get_results(
             "SELECT c.id, c.reference, c.version, c.status, c.priority, c.title, c.location_text, c.category_code, c.dun_slug, c.area_id,
-                    c.owner_id, c.name_enc, c.created_at, c.updated_at, c.accepted_at, c.followup_at
+                    c.owner_id, c.track, c.name_enc, c.created_at, c.updated_at, c.accepted_at, c.followup_at
              FROM $table c WHERE $sql_where ORDER BY c.created_at DESC, c.id DESC LIMIT " . self::PER_PAGE . " OFFSET $offset",
             ARRAY_A
         );
@@ -228,6 +230,7 @@ final class Cases
                 'owner_id' => (int) $r['owner_id'],
                 'owner_name' => $names[(int) $r['owner_id']] ?? null,
                 'complainant' => $this->crypto->decrypt($r['name_enc']),
+                'track' => $r['track'],
                 'accepted' => $r['accepted_at'] !== null,
                 'created_at' => self::iso($r['created_at']),
                 'updated_at' => self::iso($r['updated_at']),
@@ -287,6 +290,8 @@ final class Cases
             'public_draft' => $row['public_draft'],
             'public_message' => $row['public_message'],
             'reopen_count' => (int) $row['reopen_count'],
+            'track' => $row['track'],
+            'referrals' => (new Agencies())->referrals($id),
             'created_at' => self::iso($row['created_at']),
             'updated_at' => self::iso($row['updated_at']),
             'assigned_at' => self::iso($row['assigned_at']),
@@ -353,6 +358,9 @@ final class Cases
             'action', 'comment', 'return', 'reopen' => ['note' => str_repeat('x', 10)],
             'request_close' => ['closure_reason' => 'Selesai', 'resolution' => str_repeat('x', 10), 'public_draft' => str_repeat('x', 10)],
             'approve_close', 'publish' => ['public_message' => str_repeat('x', 10)],
+            'refer' => ['agency_ids' => [1], 'note' => str_repeat('x', 10)],
+            'need_info' => ['note' => str_repeat('x', 10)],
+            'agency_update' => ['referral_id' => 1, 'agency_status' => Agencies::STATUSES[0]],
             default => [],
         };
     }
@@ -394,6 +402,13 @@ final class Cases
                     $changes[$field] = [$row[$field], $value];
                 }
             }
+            $referred = [];
+            if ($op === 'refer') {
+                $referred = $this->add_referrals($id, $input['agency_ids'], $result['note'], $actor['id'], $now);
+                $changes['agencies'] = [null, implode(', ', array_column($referred, 'name'))];
+            } elseif ($op === 'agency_update') {
+                $changes += $this->update_referral($id, $input, $now);
+            }
             $status_changed = $result['status'] !== $row['status'];
             if ($set || $status_changed) {
                 $set['status'] = $result['status'];
@@ -411,7 +426,54 @@ final class Cases
             throw $e;
         }
         do_action('myaduan_case_operated', $id, $op, $actor, $row['status'], $result['status'], $changes);
+        foreach ($referred as $agency) {
+            Mailer::queue_referral($id, $agency, $result['note'], $request_id);
+        }
         return $this->get($actor, $id, false);
+    }
+
+    /** @return list<array> the agencies referred to */
+    private function add_referrals(int $case_id, array $ids, string $note, int $actor_id, string $now): array
+    {
+        $agencies = new Agencies();
+        $out = [];
+        foreach (array_unique(array_map('intval', $ids)) as $agency_id) {
+            $agency = $agencies->get($agency_id);
+            if (!$agency || !$agency['active']) {
+                throw new WorkflowException('Agensi yang dipilih tidak sah atau tidak aktif.');
+            }
+            $this->db->insert(Schema::table('agencies'), [
+                'case_id' => $case_id, 'agency_id' => $agency_id, 'status' => Agencies::STATUSES[0], 'note' => $note,
+                'actor_id' => $actor_id, 'created_at' => $now, 'updated_at' => $now,
+            ]);
+            $out[] = $agency;
+        }
+        return $out;
+    }
+
+    private function update_referral(int $case_id, array $input, string $now): array
+    {
+        $table = Schema::table('agencies');
+        $ref = $this->db->get_row($this->db->prepare(
+            "SELECT r.*, l.name agency_name FROM $table r LEFT JOIN " . Schema::table('agency_list') . ' l ON l.id = r.agency_id WHERE r.id = %d AND r.case_id = %d',
+            (int) $input['referral_id'], $case_id
+        ), ARRAY_A);
+        if (!$ref) {
+            throw new WorkflowException('Rujukan agensi tidak ditemui.');
+        }
+        $set = ['status' => $input['agency_status'], 'updated_at' => $now];
+        if (array_key_exists('reference_no', $input)) {
+            $set['reference_no'] = mb_substr(trim((string) $input['reference_no']), 0, 100) ?: null;
+        }
+        $this->db->update($table, $set, ['id' => $ref['id']]);
+        $changes = ['agency' => [null, $ref['agency_name']]];
+        if ($ref['status'] !== $set['status']) {
+            $changes['agency_status'] = [$ref['status'], $set['status']];
+        }
+        if (array_key_exists('reference_no', $set) && (string) $ref['reference_no'] !== (string) $set['reference_no']) {
+            $changes['agency_reference'] = [$ref['reference_no'], $set['reference_no']];
+        }
+        return $changes;
     }
 
     /** Catalogue and assignment eligibility checks for fields a manager is setting. */
@@ -463,7 +525,10 @@ final class Cases
 
     private function row(int $id, bool $lock = false): ?array
     {
-        return $this->db->get_row($this->db->prepare('SELECT * FROM ' . Schema::table('cases') . ' WHERE id = %d' . ($lock ? ' FOR UPDATE' : ''), $id), ARRAY_A) ?: null;
+        return $this->db->get_row($this->db->prepare(
+            'SELECT c.*, (SELECT COUNT(*) FROM ' . Schema::table('agencies') . ' r WHERE r.case_id = c.id) referral_count FROM ' . Schema::table('cases') . ' c WHERE c.id = %d' . ($lock ? ' FOR UPDATE' : ''),
+            $id
+        ), ARRAY_A) ?: null;
     }
 
     private function event(int $case_id, int $actor_id, string $event, ?string $from, ?string $to, ?string $note, ?array $changes, ?string $request_id, string $now): void
@@ -512,6 +577,8 @@ final class Cases
             'first_action_at' => $row['first_action_at'],
             'public_draft' => $row['public_draft'],
             'reopen_count' => (int) $row['reopen_count'],
+            'track' => $row['track'],
+            'referral_count' => (int) ($row['referral_count'] ?? 0),
         ];
     }
 

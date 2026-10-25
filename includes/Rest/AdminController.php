@@ -2,6 +2,9 @@
 namespace MyAduan\Rest;
 
 use MyAduan\Access;
+use MyAduan\Agencies;
+use MyAduan\Notifications;
+use MyAduan\WebPush;
 use MyAduan\Catalog;
 use MyAduan\Users;
 use MyAduan\Workflow;
@@ -21,7 +24,7 @@ final class AdminController extends Controller
     private const OP_FIELDS = [
         'note' => true, 'title' => false, 'category_code' => false, 'dun_slug' => false, 'priority' => false,
         'next_action' => false, 'followup_at' => false, 'closure_reason' => false, 'resolution' => true,
-        'public_draft' => true, 'public_message' => true,
+        'public_draft' => true, 'public_message' => true, 'agency_status' => false, 'reference_no' => false,
     ];
 
     public function register(): void
@@ -54,6 +57,24 @@ final class AdminController extends Controller
         ]);
         register_rest_route(self::NS, $base . '/users/(?P<id>\d+)', [
             'methods' => 'POST', 'callback' => [$this, 'update_user'], 'permission_callback' => [$this, 'can_manage'],
+        ]);
+        register_rest_route(self::NS, $base . '/agencies', [
+            ['methods' => 'GET', 'callback' => [$this, 'agencies'], 'permission_callback' => [$this, 'can_manage']],
+            ['methods' => 'POST', 'callback' => [$this, 'save_agency'], 'permission_callback' => [$this, 'can_manage']],
+        ]);
+        register_rest_route(self::NS, $base . '/agencies/(?P<id>\d+)', [
+            'methods' => 'POST', 'callback' => [$this, 'save_agency'], 'permission_callback' => [$this, 'can_manage'],
+        ]);
+        register_rest_route(self::NS, $base . '/notifications', [
+            'methods' => 'GET', 'callback' => [$this, 'notifications'], 'permission_callback' => [$this, 'can_access'],
+        ]);
+        register_rest_route(self::NS, $base . '/notifications/read', [
+            'methods' => 'POST', 'callback' => [$this, 'notifications_read'], 'permission_callback' => [$this, 'can_access'],
+        ]);
+        register_rest_route(self::NS, $base . '/push', [
+            ['methods' => 'GET', 'callback' => [$this, 'push_info'], 'permission_callback' => [$this, 'can_access']],
+            ['methods' => 'POST', 'callback' => [$this, 'push_subscribe'], 'permission_callback' => [$this, 'can_access']],
+            ['methods' => 'DELETE', 'callback' => [$this, 'push_unsubscribe'], 'permission_callback' => [$this, 'can_access']],
         ]);
     }
 
@@ -106,6 +127,9 @@ final class AdminController extends Controller
                 'priorities' => Workflow::PRIORITIES,
                 'closure_reasons' => Workflow::CLOSURE_REASONS,
                 'operations' => Workflow::OPERATIONS,
+                'tracks' => Workflow::TRACKS,
+                'agency_statuses' => Agencies::STATUSES,
+                'agencies' => array_map(static fn(array $a): array => ['id' => $a['id'], 'name' => $a['name']], (new Agencies())->all(true)),
                 'officers' => $officers,
             ];
         });
@@ -132,7 +156,12 @@ final class AdminController extends Controller
 
     public function get(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
     {
-        return $this->respond(fn() => $this->cases->get(Access::actor(), (int) $req['id']));
+        return $this->respond(function () use ($req) {
+            $case = $this->cases->get(Access::actor(), (int) $req['id']);
+            // Opening a case reads its notifications.
+            Notifications::mark_read(get_current_user_id(), null, (int) $req['id']);
+            return $case;
+        });
     }
 
     public function operate(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
@@ -150,6 +179,12 @@ final class AdminController extends Controller
                     $value = $params[$field];
                     $input[$field] = $value === null ? null : ($multiline ? sanitize_textarea_field((string) $value) : sanitize_text_field((string) $value));
                 }
+            }
+            if (isset($params['agency_ids']) && is_array($params['agency_ids'])) {
+                $input['agency_ids'] = array_values(array_filter(array_map('absint', $params['agency_ids'])));
+            }
+            if (isset($params['referral_id'])) {
+                $input['referral_id'] = absint($params['referral_id']);
             }
             foreach (['owner_id', 'area_id'] as $field) {
                 if (array_key_exists($field, $params)) {
@@ -173,6 +208,66 @@ final class AdminController extends Controller
     public function update_user(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
     {
         return $this->respond(fn() => $this->users_service()->update((int) $req['id'], $req->get_json_params() ?: $req->get_body_params(), get_current_user_id()));
+    }
+
+    public function agencies(): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(fn() => (new Agencies())->all());
+    }
+
+    public function save_agency(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        $id = (int) ($req['id'] ?? 0);
+        return $this->respond(fn() => (new Agencies())->save($id, $req->get_json_params() ?: $req->get_body_params()), $id ? 200 : 201);
+    }
+
+    public function notifications(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(function () use ($req) {
+            $uid = get_current_user_id();
+            if ($req->get_param('count')) {
+                return ['unread' => Notifications::unread($uid)];
+            }
+            return Notifications::list($uid, (bool) $req->get_param('unread'));
+        });
+    }
+
+    public function notifications_read(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(function () use ($req) {
+            $p = $req->get_json_params() ?: $req->get_body_params();
+            $ids = isset($p['ids']) && is_array($p['ids']) ? $p['ids'] : null;
+            return ['unread' => Notifications::mark_read(get_current_user_id(), $ids)];
+        });
+    }
+
+    public function push_info(): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(fn() => ['public_key' => WebPush::public_key(), 'devices' => Notifications::devices(get_current_user_id())]);
+    }
+
+    public function push_subscribe(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(function () use ($req) {
+            $p = $req->get_json_params() ?: [];
+            Notifications::subscribe(
+                get_current_user_id(),
+                (string) ($p['endpoint'] ?? ''),
+                (string) ($p['keys']['p256dh'] ?? ''),
+                (string) ($p['keys']['auth'] ?? ''),
+                sanitize_text_field((string) $req->get_header('user_agent'))
+            );
+            return ['devices' => Notifications::devices(get_current_user_id())];
+        }, 201);
+    }
+
+    public function push_unsubscribe(\WP_REST_Request $req): \WP_REST_Response|\WP_Error
+    {
+        return $this->respond(function () use ($req) {
+            $p = $req->get_json_params() ?: [];
+            Notifications::unsubscribe(get_current_user_id(), (string) ($p['endpoint'] ?? ''));
+            return ['devices' => Notifications::devices(get_current_user_id())];
+        });
     }
 
     private function users_service(): Users

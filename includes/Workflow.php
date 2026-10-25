@@ -21,6 +21,11 @@ final class Workflow
     public const PRIORITIES = ['BIASA', 'SEGERA', 'KECEMASAN'];
     public const CLOSURE_REASONS = ['Selesai', 'Duplikasi', 'Ditarik balik', 'Di luar skop'];
 
+    /** How an open case is being handled, set by a decision operation. */
+    public const TRACKS = ['AGENSI' => 'Dipanjangkan ke agensi', 'SENDIRI' => 'Tindakan sendiri', 'MAKLUMAT' => 'Perlu maklumat lanjut'];
+    /** Decisions the case owner or a Super Admin may take; a Super Admin taking one on an unowned case becomes its owner. */
+    private const DECISION_OPS = ['refer' => 'AGENSI', 'self' => 'SENDIRI', 'need_info' => 'MAKLUMAT'];
+
     /** Operations only a Super Admin (manager) may perform. */
     private const MANAGER_OPS = ['classify', 'assign', 'approve_close', 'return', 'reopen', 'publish'];
     /** Operations only the assigned owner may perform, even for a manager. */
@@ -37,11 +42,15 @@ final class Workflow
         'return' => 'Kembalikan untuk tindakan',
         'reopen' => 'Buka semula',
         'publish' => 'Kemas kini mesej awam',
+        'refer' => 'Panjangkan ke agensi',
+        'self' => 'Tindakan sendiri',
+        'need_info' => 'Perlu maklumat lanjut',
+        'agency_update' => 'Kemas kini status agensi',
     ];
 
     /**
      * @param array{status:string, owner_id:int, accepted_at:?string, first_action_at:?string,
-     *              public_draft:?string, reopen_count:int} $case
+     *              public_draft:?string, reopen_count:int, track?:?string, referral_count?:int} $case
      * @param array{id:int, manager:bool} $actor
      * @param array<string, mixed> $input Already sanitized strings.
      * @return array{status:string, set:array<string, mixed>, note:string}
@@ -64,6 +73,9 @@ final class Workflow
         }
         if ($op === 'comment' && !$actor['manager'] && !$is_owner) {
             throw new WorkflowException('Hanya Super Admin atau pegawai kes boleh menambah catatan.');
+        }
+        if ((isset(self::DECISION_OPS[$op]) || $op === 'agency_update') && !$actor['manager'] && !$is_owner) {
+            throw new WorkflowException('Hanya pegawai kes atau Super Admin boleh membuat keputusan ini.');
         }
         if ($status === self::CLOSED && !in_array($op, ['reopen', 'comment', 'assign'], true)) {
             throw new WorkflowException('Kes telah ditutup. Buka semula dahulu.');
@@ -171,6 +183,60 @@ final class Workflow
                 self::require_note($note);
                 $set = ['closed_at' => null, 'closure_reason' => null, 'reopen_count' => (int) $case['reopen_count'] + 1];
                 $status = self::IN_ACTION;
+                break;
+
+            case 'refer':
+            case 'self':
+            case 'need_info':
+                if ($status === self::AWAITING_CLOSE) {
+                    throw new WorkflowException('Kes sedang menunggu pengesahan penutupan.');
+                }
+                if ($op === 'refer') {
+                    $ids = array_values(array_unique(array_filter(array_map('intval', (array) ($input['agency_ids'] ?? [])))));
+                    if (!$ids) {
+                        throw new WorkflowException('Pilih sekurang-kurangnya satu agensi.');
+                    }
+                    if (count($ids) > Agencies::MAX_PER_REFERRAL) {
+                        throw new WorkflowException('Pilih paling banyak ' . Agencies::MAX_PER_REFERRAL . ' agensi sekali hantar.');
+                    }
+                    if (mb_strlen($note) < 10) {
+                        throw new WorkflowException('Tulis mesej kepada agensi (sekurang-kurangnya 10 aksara).');
+                    }
+                }
+                if ($op === 'need_info' && mb_strlen($note) < 10) {
+                    throw new WorkflowException('Nyatakan maklumat yang diperlukan (sekurang-kurangnya 10 aksara).');
+                }
+                $set = ['track' => self::DECISION_OPS[$op], 'last_action_at' => $now];
+                if (empty($case['first_action_at'])) {
+                    $set['first_action_at'] = $now;
+                }
+                if ($owner === 0) {
+                    $set += ['owner_id' => (int) $actor['id'], 'assigned_at' => $now];
+                    $is_owner = true;
+                }
+                if ($is_owner && empty($case['accepted_at'])) {
+                    $set['accepted_at'] = $now;
+                }
+                if (isset($input['next_action'])) {
+                    $set['next_action'] = mb_substr(trim((string) $input['next_action']), 0, 500) ?: null;
+                }
+                if (array_key_exists('followup_at', $input)) {
+                    $set['followup_at'] = self::utc_or_null($input['followup_at']);
+                }
+                $status = self::IN_ACTION;
+                break;
+
+            case 'agency_update':
+                if (empty($case['referral_count'])) {
+                    throw new WorkflowException('Kes ini belum dipanjangkan ke mana-mana agensi.');
+                }
+                if ((int) ($input['referral_id'] ?? 0) <= 0) {
+                    throw new WorkflowException('Pilih rujukan agensi untuk dikemas kini.');
+                }
+                if (!in_array($input['agency_status'] ?? '', Agencies::STATUSES, true)) {
+                    throw new WorkflowException('Pilih status agensi.');
+                }
+                $set = ['last_action_at' => $now];
                 break;
 
             case 'publish':

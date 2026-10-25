@@ -15,7 +15,7 @@ final class EmailTest extends TestCase
         parent::setUp();
         global $wpdb;
         $wpdb->query('TRUNCATE TABLE ' . Schema::table('mail_queue'));
-        update_option('myaduan_settings', ['notify_emails' => 'urusetia@myaduan.my']);
+        update_option('myaduan_settings', ['notify_emails' => 'urusetia@myaduan.my', 'staff_email' => '1']);
         add_filter('pre_wp_mail', [$this, 'capture'], 10, 2);
     }
 

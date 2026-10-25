@@ -101,13 +101,25 @@ await desk.locator('tbody tr', { hasText: email }).waitFor();
 assert((await desk.locator('tbody tr', { hasText: email }).textContent()).includes('Jalan & Infrastruktur'), 'pengguna baru disenaraikan dengan kategorinya');
 await desk.screenshot({ path: `${SHOTS}/p4-pengguna.png`, fullPage: true });
 
-/* ---- Officer on a phone: accept, act, ask to close ---- */
+/* ---- Super Admin: agencies and notifications ---- */
+await desk.locator('.nav a', { hasText: 'Agensi' }).click();
+await desk.locator('tbody tr', { hasText: 'Majlis Perbandaran Selayang' }).waitFor();
+assert((await desk.locator('tbody tr').count()) >= 40, 'senarai agensi dimuatkan');
+await desk.screenshot({ path: `${SHOTS}/p4b-agensi.png`, fullPage: true });
+await desk.locator('a.bell').click();
+await desk.locator('h1', { hasText: 'Notifikasi' }).waitFor();
+assert(await desk.locator('.notif-list li', { hasText: created.reference }).count() >= 1, 'notifikasi aduan baru untuk Super Admin');
+await desk.screenshot({ path: `${SHOTS}/p4c-notifikasi.png`, fullPage: true });
+
+/* ---- Officer on a phone: accept, refer, act, ask to close ---- */
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 const phone = await ctx.newPage();
 watch(phone);
 await login(phone, 'e2e_officer', '/wp-login.php');
 assert(new URL(phone.url()).pathname === '/adminaduan/', 'pegawai terus ke portal selepas log masuk');
 assert(await phone.locator('.nav a', { hasText: 'Pengguna' }).count() === 0, 'tiada menu Pengguna untuk pegawai');
+await phone.locator('a.bell .count:not([hidden])').waitFor();
+assert(Number(await phone.locator('a.bell .count').textContent()) >= 1, 'loceng menunjukkan notifikasi tugasan');
 await phone.locator('.stat', { hasText: 'Kes saya' }).click();
 await phone.locator('a.ref', { hasText: created.reference }).click();
 await phone.locator('.case-head').waitFor();
@@ -115,6 +127,16 @@ await phone.screenshot({ path: `${SHOTS}/p5-pegawai-kes.png`, fullPage: true });
 await phone.locator('.op-form button[type=submit]', { hasText: 'Terima tugasan' }).click();
 await phone.locator('.timeline li', { hasText: 'Tugasan diterima' }).waitFor();
 assert(await statusOf(phone) === 'DALAM TINDAKAN', 'status DALAM TINDAKAN selepas diterima');
+
+await phone.locator('[data-op=refer]').click();
+await phone.locator('.agency-pick').waitFor();
+await phone.locator('input[type=search][aria-label="Cari agensi"]').fill('selayang (mps)');
+await phone.locator('.agency-pick label', { hasText: 'Majlis Perbandaran Selayang' }).locator('input').check();
+await phone.screenshot({ path: `${SHOTS}/p5b-panjangkan.png`, fullPage: true });
+await phone.locator('.op-form button[type=submit]').click();
+await phone.locator('.referrals li', { hasText: 'Majlis Perbandaran Selayang' }).waitFor();
+assert((await phone.locator('.case-head .badges').textContent()).includes('Dipanjangkan ke agensi'), 'kes ditanda dipanjangkan ke agensi');
+await phone.screenshot({ path: `${SHOTS}/p5c-dipanjangkan.png`, fullPage: true });
 
 await phone.locator('[data-op=action]').click();
 await phone.locator('textarea[name=note]').fill('Lawatan tapak. Aduan dipanjangkan kepada MPS untuk ganti lampu.');

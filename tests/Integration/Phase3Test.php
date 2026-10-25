@@ -153,7 +153,7 @@ final class Phase3Test extends TestCase
     public function test_site_admin_and_self_are_protected(): void
     {
         $admin = $this->make_user('t_siteadmin2', 'administrator');
-        $this->assertSame(404, $this->call('POST', "/admin/users/$admin", ['name' => 'Ubah'], 'super')[0], 'administrators are not MyAduan-managed accounts');
+        $this->assertSame(403, $this->call('POST', "/admin/users/$admin", ['name' => 'Ubah'], 'super')[0], 'administrators stay managed in WordPress');
         update_user_meta($admin, Users::INACTIVE_META, 'myaduan_officer');
         $this->assertSame(403, $this->call('POST', "/admin/users/$admin", ['name' => 'Ubah'], 'super')[0]);
         [$status, $data] = $this->call('POST', '/admin/users/' . self::$users['super'], ['role' => 'viewer'], 'super');
@@ -190,6 +190,29 @@ final class Phase3Test extends TestCase
         $this->call('POST', "/admin/users/$officer", ['active' => true], 'super');
         clean_user_cache($officer);
         $this->assertInstanceOf(WP_User::class, wp_authenticate($login, 'Kata-Laluan-123'));
+    }
+
+    public function test_staff_account_made_in_wp_admin_can_get_a_role(): void
+    {
+        $id = wp_insert_user(['user_login' => 'tarmizi_wp', 'user_email' => 'tarmizi.wp@myaduan.my', 'user_pass' => 'x' . wp_generate_password(), 'role' => 'subscriber', 'display_name' => 'Tarmizi']);
+        $outsider = wp_insert_user(['user_login' => 'luar_wp', 'user_email' => 'luar@contoh.com', 'user_pass' => 'x' . wp_generate_password(), 'role' => 'subscriber']);
+        $this->created[] = $id;
+        $this->created[] = $outsider;
+
+        [, $list] = $this->call('GET', '/admin/users', [], 'super');
+        $row = array_values(array_filter($list, static fn($u) => $u['id'] === $id))[0] ?? null;
+        $this->assertNotNull($row, 'staff account without a MyAduan role is listed');
+        $this->assertSame(['none', false, true], [$row['role'], $row['active'], $row['needs_role']]);
+        $this->assertSame([], array_filter($list, static fn($u) => $u['id'] === $outsider), 'other accounts stay hidden');
+
+        [$status] = $this->call('POST', '/admin/users', ['name' => 'Tarmizi', 'email' => 'tarmizi.wp@myaduan.my', 'role' => 'officer', 'policy' => ['mode' => 'all']], 'super');
+        $this->assertSame(422, $status, 'adding the same e-mail again points to the list instead');
+
+        [$status, $u] = $this->call('POST', "/admin/users/$id", ['name' => 'Tarmizi', 'email' => 'tarmizi.wp@myaduan.my', 'role' => 'officer', 'policy' => ['mode' => 'all']], 'super');
+        $this->assertSame(200, $status, wp_json_encode($u));
+        $this->assertSame(['officer', true, false, 'all'], [$u['role'], $u['active'], $u['needs_role'], $u['policy']['mode']]);
+        clean_user_cache($id);
+        $this->assertTrue(user_can($id, 'myaduan_work_cases'));
     }
 
     public function test_promote_officer_to_viewer_clears_policy(): void

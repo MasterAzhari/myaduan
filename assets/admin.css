@@ -165,6 +165,33 @@ tr.inactive td { color: var(--muted); }
 .denied-logo { display: block; margin: 0 auto 12px; }
 .denied { max-width: 480px; margin: 12vh auto; padding: 24px 16px; text-align: center; }
 
+/* decisions, agencies, notifications */
+.tr-agensi { background: #fff4e5; color: #8a4b00; }
+.tr-sendiri { background: #e6f4ea; color: #137333; }
+.tr-maklumat { background: #fce8e6; color: #a50e0e; }
+.ag-dirujuk, .ag-dalam-tindakan-agensi { background: #e8f0fe; color: #174ea6; }
+.ag-selesai-oleh-agensi { background: #e6f4ea; color: #137333; }
+.ag-ditolak-agensi { background: #ececf0; color: #5f6368; }
+.agency-pick { max-height: 260px; overflow-y: auto; border: 1px solid var(--line, #ddd); border-radius: 8px; padding: 6px 10px; margin: 6px 0; }
+.agency-pick .check { padding: 5px 0; font-size: .9rem; align-items: flex-start; }
+.agency-pick .check input { margin-top: 3px; }
+.referrals { list-style: none; margin: 0; padding: 0; }
+.referrals li { padding: 8px 0; border-bottom: 1px solid var(--line, #eee); }
+.referrals li:last-child { border-bottom: 0; }
+.referrals small { display: block; margin-top: 2px; }
+.ok-text { color: #137333; font-weight: 600; }
+.help-box { background: #f6f7fb; border-radius: 8px; padding: 10px 12px; font-size: .9rem; }
+.bell { position: relative; display: inline-flex; padding: 6px; border-radius: 50%; color: #fff; opacity: 1 !important; text-decoration: none !important; }
+.bell:hover, .bell.active { background: rgba(255, 255, 255, .18); }
+.bell .count { position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #fff; color: var(--red); font-size: .72rem; font-weight: 700; line-height: 18px; text-align: center; }
+.notif-list { list-style: none; padding: 0; overflow: hidden; }
+.notif-list li + li { border-top: 1px solid var(--line, #eee); }
+.notif { display: grid; gap: 2px; width: 100%; padding: 12px 16px; border: 0; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.notif:hover { background: #f6f7fb; }
+.notif-list .unread .notif { background: #fff8f8; box-shadow: inset 3px 0 0 var(--red); }
+.notif-list .unread strong::after { content: ' •'; color: var(--red); }
+.device .btn { margin-top: 4px; }
+
 @media (max-width: 1000px) {
   .case-grid { grid-template-columns: 1fr; }
   .col-side { position: static; order: -1; }
