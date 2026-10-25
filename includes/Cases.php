@@ -259,7 +259,12 @@ final class Cases
             'SELECT id, kind, original_name, mime, size, created_at FROM ' . Schema::table('attachments') . ' WHERE case_id = %d ORDER BY id',
             $id
         ), ARRAY_A);
-        $names = $this->user_names(array_merge([(int) $row['owner_id']], array_column($events, 'actor_id')));
+        // Officers handed a case in its history are named too: an officer's portal has no staff list to look them up in.
+        $owners = [];
+        foreach ($events as $e) {
+            $owners = array_merge($owners, (array) (json_decode((string) $e['changes'], true)['owner_id'] ?? []));
+        }
+        $names = $this->user_names(array_merge([(int) $row['owner_id']], array_column($events, 'actor_id'), $owners));
         $is_owner = (int) $row['owner_id'] === $actor['id'];
 
         return [
@@ -316,6 +321,7 @@ final class Cases
                 'created_at' => self::iso($e['created_at']),
             ], $events),
             'allowed_operations' => $this->allowed_operations($actor, $row, $is_owner),
+            'user_names' => (object) $names,
         ];
     }
 

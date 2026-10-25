@@ -10,7 +10,7 @@
     return;
   }
   const app = document.getElementById('app');
-  const state = { me: null, catalog: null, cats: new Map(), duns: new Map(), areas: new Map(), lastList: '#/kes' };
+  const state = { me: null, catalog: null, cats: new Map(), duns: new Map(), areas: new Map(), caseNames: {}, lastList: '#/kes' };
 
   const ROLE = { superadmin: 'Super Admin', officer: 'Pegawai', viewer: 'Pemerhati', none: 'Tiada peranan' };
   const ROLE_HELP = {
@@ -88,7 +88,7 @@
   function officerName(id) {
     if (!id) return null;
     if (id === state.me.id) return state.me.name;
-    return state.catalog.officers.find((o) => o.id === id)?.name || 'Pengguna #' + id;
+    return state.catalog.officers.find((o) => o.id === id)?.name || state.caseNames[id] || 'Pengguna #' + id;
   }
 
   let toastTimer;
@@ -398,6 +398,7 @@
   }
 
   function renderCase(c) {
+    state.caseNames = c.user_names || {};
     const dl = (pairs) => h('dl', { class: 'facts' }, pairs.filter(([, v]) => v != null && v !== '').map(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]));
     const phone = c.complainant.phone || '';
     const map = c.lat != null && c.lng != null ? h('a', { href: `https://www.google.com/maps?q=${c.lat},${c.lng}`, target: '_blank', rel: 'noopener' }, 'Buka peta') : null;
