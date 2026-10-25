@@ -9,6 +9,13 @@ const SHOTS = process.env.SHOTS || '/tmp/myaduan-rupa';
 const PASS = process.env.E2E_PASS || 'Ujian-12345';
 mkdirSync(SHOTS, { recursive: true });
 
+const wide = [];
+// On a phone nothing may be wider than the screen (long words or links must wrap).
+async function checkWidth(page, name) {
+  const w = await page.evaluate(() => document.documentElement.scrollWidth);
+  if (w > page.viewportSize().width) wide.push(`${name}: ${w}px`);
+}
+
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const errors = [];
 
@@ -30,6 +37,7 @@ async function shoot(page, hash, name) {
   await page.locator('main#view h1').first().waitFor();
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
+  await checkWidth(page, name);
 }
 
 const PAGES = [['#/kes', 'senarai'], ['#/agensi', 'agensi'], ['#/kawasan', 'kawasan'], ['#/emel', 'emel'], ['#/pengguna', 'pengguna'], ['#/notifikasi', 'notifikasi'], ['#/profil', 'profil']];
@@ -37,7 +45,15 @@ for (const [label, viewport, scale] of [['telefon', { width: 390, height: 844 },
   const page = await session('e2e_super', viewport, scale);
   for (const [hash, name] of PAGES) await shoot(page, hash, `${label}-${name}`);
   await page.goto(BASE + '/adminaduan/#/kes');
-  await page.locator('a.ref').first().click();
+  await page.locator('a.ref').first().waitFor();
+  const cases = await page.locator('a.ref').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
+  for (const href of cases) {
+    await page.goto(BASE + '/adminaduan/' + href);
+    await page.locator('.case-head').waitFor();
+    await page.waitForTimeout(200);
+    await checkWidth(page, `${label}-${href}`);
+  }
+  await page.goto(BASE + '/adminaduan/' + cases[0]);
   await page.locator('.case-head').waitFor();
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${SHOTS}/${label}-kes.png`, fullPage: true });
@@ -54,4 +70,5 @@ const officer = await session('e2e_officer', { width: 390, height: 844 }, 2);
 await shoot(officer, '#/kes', 'telefon-pegawai-senarai');
 await browser.close();
 if (errors.length) { console.error('Ralat JavaScript:', errors); process.exit(1); }
+if (wide.length) { console.error('Halaman lebih lebar dari skrin:', wide); process.exit(1); }
 console.log('Siap:', SHOTS);
