@@ -161,6 +161,7 @@ phpunit                                   # ujian unit
 WP_ROOT=/path/ke/wordpress-ujian phpunit -c phpunit-integration.xml.dist   # ujian WordPress + MySQL sebenar
 CHROMIUM_PATH=... BASE_URL=http://localhost:8080 node tests/e2e/borang.mjs   # uji borang dalam browser (perlu npm i playwright)
 CHROMIUM_PATH=... BASE_URL=http://localhost:8080 node tests/e2e/portal.mjs   # uji portal: akaun e2e_super & e2e_officer (kategori A04), kata laluan E2E_PASS
+CHROMIUM_PATH=... BASE_URL=http://localhost:8080 SHOTS=/tmp/rupa node tests/e2e/rupa.mjs   # screenshot semua halaman portal (telefon & desktop) untuk banding rupa
 bash bin/build-zip.sh                     # hasilkan dist/myaduan-x.y.z.zip
 ```
 
