@@ -21,6 +21,7 @@ while True:
             conn.sendall(('* %d EXISTS\r\n* OK [UIDVALIDITY 7] ok\r\n%s OK [READ-ONLY] done\r\n' % (len(msgs), tag)).encode())
         elif up.startswith('UID SEARCH'):
             lo = int(re.search(r'UID (\d+):\*', cmd).group(1))
+            with open(os.path.join(folder, '..', os.path.basename(folder) + '.log'), 'a') as log: log.write(cmd + '\n')
             uids = [i + 1 for i in range(len(msgs)) if i + 1 >= lo] or ([len(msgs)] if msgs else [])
             conn.sendall(('* SEARCH %s\r\n%s OK done\r\n' % (' '.join(map(str, uids)), tag)).encode())
         elif up.startswith('UID FETCH'):

@@ -130,11 +130,18 @@ final class MailStatusTest extends TestCase
 
     public function test_complainant_address_is_never_listed(): void
     {
+        global $wpdb;
         $this->submit(['email' => 'siti@contoh.com']);
+        $this->fail = true;
+        Mailer::process();
+        // A server error that quotes the address, as SMTP rejections and bounce reasons do.
+        $wpdb->query('UPDATE ' . Schema::table('mail_queue') . " SET last_error = 'SMTP Error: 550 <siti@contoh.com> mailbox unavailable' WHERE dedupe_key LIKE 'ack:%'");
         [, $log] = $this->call('GET', '/admin/mail', [], 'super');
         $ack = array_values(array_filter($log['items'], static fn($m) => $m['kind'] === 'Pengadu'))[0];
         $this->assertSame('Pengadu', $ack['recipient']);
         $this->assertStringNotContainsString('siti@contoh.com', wp_json_encode($log));
+        $this->assertSame('SMTP Error: 550 <[e-mel pengadu]> mailbox unavailable', $ack['status']['error']);
+        $this->assertFalse($ack['can_retry']);
     }
 
     private function dsn(string $token, string $action = 'failed'): string
@@ -152,6 +159,8 @@ final class MailStatusTest extends TestCase
         $token = Mailer::bounce_token(42);
         $this->assertSame(['id' => 42, 'reason' => '550 5.1.1 <tiada@mps.gov.my>: Recipient address rejected: User unknown in virtual mailbox table'], Mailbox::parse($this->dsn($token)));
         $this->assertNull(Mailbox::parse($this->dsn($token, 'delayed')), 'a delay is not a bounce');
+        $this->assertNull(Mailbox::parse(str_replace('Status: 5.1.1', 'Status: 2.0.0', $this->dsn($token, 'delivered'))), 'a success report is not a bounce');
+        $this->assertNull(Mailbox::parse($this->dsn($token, 'relayed')));
         $this->assertNull(Mailbox::parse($this->dsn('m42-000000000000')), 'forged token');
         $this->assertNull(Mailbox::parse("From: someone@mps.gov.my\r\nSubject: Re: aduan\r\n\r\n" . Mailer::ID_HEADER . ": $token\r\n"), 'not a delivery report');
     }
@@ -216,6 +225,9 @@ final class MailStatusTest extends TestCase
         $this->assertStringContainsString('User unknown', $row['last_error']);
 
         $this->assertSame(0, Mailbox::check(), 'messages already read are skipped');
+        $searches = file($this->imap_dir . '.log', FILE_IGNORE_NEW_LINES);
+        $this->assertMatchesRegularExpression('/^UID SEARCH UID 1:\* SINCE \d+-\w+-\d{4}$/', $searches[0], 'first look: recent mail only');
+        $this->assertSame('UID SEARCH UID 4:*', end($searches), 'later: everything after the cursor, no date limit');
         [, $case] = $this->call('GET', '/admin/cases/' . $c['id'], [], 'a01');
         $this->assertSame('bounced', $case['referrals'][0]['mail']['state']);
         $this->assertSame(1, count(array_filter($case['events'], static fn($e) => $e['event'] === 'AGENCY_REPLY')));
