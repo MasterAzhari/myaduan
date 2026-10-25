@@ -28,9 +28,10 @@ function png(w, h) {
 function assert(cond, msg) { if (!cond) { throw new Error('GAGAL: ' + msg); } console.log('ok -', msg); }
 
 // A fresh complaint with a photo, sent the way the public form sends it.
+const newKey = () => [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('');
 const fd = new FormData();
 const fields = {
-  client_key: [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join(''),
+  client_key: newKey(),
   name: 'Siti binti Ahmad', ic: '880512-10-5432', phone: '012-987 6543', consent: 'true',
   details: 'Lampu jalan di depan sekolah rosak sejak minggu lepas. Gelap dan bahaya waktu malam.',
   location: 'Jalan Sungai Tua, depan SK Sungai Tua',
@@ -213,6 +214,27 @@ await phone.screenshot({ path: `${SHOTS}/p6-pegawai-mohon-tutup.png`, fullPage: 
 await phone.goto(BASE + '/wp-admin/index.php');
 await phone.waitForURL(/\/adminaduan\//);
 assert(true, 'pegawai yang buka wp-admin dihantar ke portal');
+
+/* ---- A case the Super Admin keeps: the officer still sees who holds it, by name ---- */
+{
+  const fd2 = new FormData();
+  for (const [k, v] of Object.entries(Object.assign({}, fields, { client_key: newKey(), details: 'Pokok tumbang menghalang laluan pejalan kaki di tepi surau.' }))) fd2.append(k, v);
+  const second = await (await fetch(BASE + '/wp-json/myaduan/v1/complaints', { method: 'POST', body: fd2 })).json();
+  assert(/^GOM-/.test(second.reference || ''), 'aduan kedua dicipta: ' + second.reference);
+  const superName = (await desk.locator('.who-name').evaluate((el) => el.firstChild.textContent)).trim();
+  await desk.goto(BASE + '/adminaduan/#/kes?flag=open');
+  await desk.locator('a.ref', { hasText: second.reference }).click();
+  await desk.locator('[data-op=screen]').click();
+  await desk.locator('select[name=category_code]').selectOption('A04');
+  const mine = (await desk.locator('select[name=owner_id] option').allTextContents()).find((t) => t.includes(superName));
+  await desk.locator('select[name=owner_id]').selectOption({ label: mine });
+  await desk.locator('.op-form button[type=submit]').click();
+  await desk.locator('.timeline li', { hasText: 'Ditugaskan' }).waitFor();
+  await phone.goto(BASE + '/adminaduan/' + new URL(desk.url()).hash);
+  await phone.locator('.timeline li', { hasText: 'Ditugaskan' }).waitFor();
+  const line = await phone.locator('.timeline li', { hasText: 'Ditugaskan' }).first().textContent();
+  assert(line.includes('Pegawai: ' + superName) && !line.includes('Pengguna #'), 'pegawai nampak nama Super Admin yang memegang kes, bukan "Pengguna #"');
+}
 
 /* ---- Super Admin approves ---- */
 await desk.goto(BASE + '/adminaduan/#/kes?status=MENUNGGU%20PENGESAHAN');
