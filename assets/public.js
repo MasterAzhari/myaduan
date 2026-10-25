@@ -168,7 +168,7 @@
         { stage: 3, kicker: 'Lokasi & gambar', q: 'Di mana lokasi tepat masalah?', lead: 'Masukkan alamat, nama jalan, taman atau mercu tanda.', body: () => this.stepLocation(), check: () => this.checkFields(['location']) },
         { stage: 3, kicker: 'Lokasi & gambar', q: 'Ada gambar untuk dikongsikan?', lead: 'Gambar membantu pegawai memahami masalah. Langkah ini pilihan.', body: () => this.stepImages(), check: () => this.pendingCheck() },
         { stage: 4, kicker: 'Maklumat anda', q: 'Siapakah nama anda?', lead: 'Nama ini digunakan untuk urusan aduan anda.', body: () => this.stepName(), check: () => this.checkFields(['name']) },
-        { stage: 4, kicker: 'Maklumat anda', q: 'Bagaimana kami boleh hubungi anda?', lead: 'No. kad pengenalan digunakan untuk semak status. Nombor telefon untuk pegawai menghubungi anda.', body: () => this.stepContact(), check: () => this.checkFields(['ic', 'phone']) },
+        { stage: 4, kicker: 'Maklumat anda', q: 'Bagaimana kami boleh hubungi anda?', lead: 'No. kad pengenalan digunakan untuk semak status. Nombor telefon untuk pegawai menghubungi anda.', body: () => this.stepContact(), check: () => this.checkFields(['ic', 'phone', 'email']) },
         { stage: 5, kicker: 'Semakan', q: 'Semuanya sudah betul?', lead: 'Semak maklumat di bawah. Tekan Ubah untuk membetulkan jawapan.', body: () => this.stepReview(), check: () => this.checkFields(['consent']) },
       ];
       if (this.state.step >= this.steps.length) this.state.step = -1;
@@ -373,7 +373,8 @@
     stepContact() {
       return h('div', {},
         this.field('ic', 'No. kad pengenalan', '(wajib, untuk semak status)', this.input('ic', { type: 'text', inputmode: 'numeric', autocomplete: 'off', placeholder: '900101-14-5678', maxlength: 14 })),
-        this.field('phone', 'No. telefon bimbit', null, this.input('phone', { type: 'tel', autocomplete: 'tel', placeholder: '012-345 6789', maxlength: 20 })));
+        this.field('phone', 'No. telefon bimbit', null, this.input('phone', { type: 'tel', autocomplete: 'tel', placeholder: '012-345 6789', maxlength: 20 })),
+        this.field('email', 'E-mel', '(pilihan, untuk terima nombor rujukan)', this.input('email', { type: 'email', autocomplete: 'email', inputmode: 'email', placeholder: 'nama@contoh.com', maxlength: 190 })));
     }
 
     stepReview() {
@@ -387,6 +388,7 @@
         ['Nama', f.name, 4],
         ['No. kad pengenalan', f.ic, 5],
         ['No. telefon', f.phone, 5],
+        ['E-mel', f.email || 'Tiada', 5],
       ];
       return h('div', {},
         h('div', { class: 'review' }, rows.map(([label, value, step]) => h('div', { class: 'review-row' },
@@ -492,6 +494,7 @@
         name: (f.name || '').trim().length < 3 ? 'Nama penuh diperlukan.' : '',
         ic: (f.ic || '').replace(/\D/g, '').length !== 12 ? 'No. IC mesti 12 digit.' : '',
         phone: (f.phone || '').replace(/\D/g, '').length < 9 ? 'No. telefon tidak sah.' : '',
+        email: (f.email || '').trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim()) ? 'Alamat e-mel tidak sah. Kosongkan jika tiada.' : '',
         consent: !f.consent ? 'Sila tandakan pengesahan ini.' : '',
       };
     }
@@ -512,7 +515,7 @@
 
     /** Step that holds a field, so a server error can send the user back to it. */
     stepOf(field) {
-      return { details: 1, location: 2, images: 3, name: 4, ic: 5, phone: 5 }[field] ?? this.steps.length - 1;
+      return { details: 1, location: 2, images: 3, name: 4, ic: 5, phone: 5, email: 5 }[field] ?? this.steps.length - 1;
     }
 
     async submit() {
@@ -526,6 +529,7 @@
       const fd = new FormData();
       fd.append('client_key', this.state.key);
       for (const k of ['name', 'ic', 'phone', 'details', 'location']) fd.append(k, this.state.fields[k] || '');
+      fd.append('email', (this.state.fields.email || '').trim());
       fd.append('consent', 'true');
       fd.append('website', this.hp || '');
       if (this.state.coords) { fd.append('lat', this.state.coords.lat); fd.append('lng', this.state.coords.lng); }

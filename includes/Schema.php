@@ -40,6 +40,7 @@ final class Schema
   ic_enc text NOT NULL,
   ic_index char(64) NOT NULL,
   phone_enc text NOT NULL,
+  email_enc text DEFAULT NULL,
   owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
   next_action varchar(500) DEFAULT NULL,
   resolution text DEFAULT NULL,

@@ -44,6 +44,7 @@ final class PublicController extends Controller
                 'name' => (string) $req->get_param('name'),
                 'ic' => (string) $req->get_param('ic'),
                 'phone' => (string) $req->get_param('phone'),
+                'email' => (string) $req->get_param('email'),
                 'details' => (string) $req->get_param('details'),
                 'location' => (string) $req->get_param('location'),
                 'lat' => $req->get_param('lat'),

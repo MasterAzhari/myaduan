@@ -79,7 +79,10 @@ final class Users
         $current = $this->shape($user, []);
         $errors = [];
         $name = array_key_exists('name', $in) ? $this->name($in['name'], $errors) : $current['name'];
-        $email = array_key_exists('email', $in) ? $this->email($in['email'], $id, $errors) : $current['email'];
+        // The effective address is always checked, so an old non-@myaduan.my account must be moved
+        // before any other change saves. Only deactivating such an account is allowed as is.
+        $only_deactivate = array_keys($in) === ['active'] && !filter_var($in['active'], FILTER_VALIDATE_BOOLEAN);
+        $email = $only_deactivate ? $current['email'] : $this->email($in['email'] ?? $current['email'], $id, $errors);
         $role = array_key_exists('role', $in) ? $this->role($in['role'], $errors) : $current['role'];
         $active = array_key_exists('active', $in) ? filter_var($in['active'], FILTER_VALIDATE_BOOLEAN) : $current['active'];
         if ($role === 'none') {
@@ -161,6 +164,7 @@ final class Users
             'role' => $role,
             'active' => $site_admin || ($inactive === '' && $role !== 'none'),
             'site_admin' => $site_admin,
+            'email_ok' => Settings::is_staff_email($u->user_email),
             'policy' => Access::normalize_policy(get_user_meta($u->ID, Access::POLICY_META, true)),
             'open_cases' => count($open),
         ];
@@ -203,6 +207,8 @@ final class Users
         $email = sanitize_email((string) $value);
         if (!is_email($email)) {
             $errors['email'] = 'Masukkan alamat e-mel yang sah.';
+        } elseif (!Settings::is_staff_email($email)) {
+            $errors['email'] = 'Akaun MyAduan mesti guna e-mel @' . Settings::staff_domain() . '.';
         } elseif (($owner = email_exists($email)) && (int) $owner !== $self_id) {
             $errors['email'] = 'E-mel ini sudah digunakan oleh akaun lain.';
         }

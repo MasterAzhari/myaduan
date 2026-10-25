@@ -66,6 +66,12 @@ final class Validator
             $errors['phone'] = 'No. telefon tidak sah.';
         }
 
+        // Optional: only used to send the complainant their reference number.
+        $email = strtolower(trim((string) ($in['email'] ?? '')));
+        if ($email !== '' && (mb_strlen($email) > 190 || !is_email($email))) {
+            $errors['email'] = 'Alamat e-mel tidak sah. Kosongkan jika tiada.';
+        }
+
         // Keep line breaks in the narrative; only trim the ends.
         $details = trim(str_replace("\r\n", "\n", (string) ($in['details'] ?? '')));
         $len = mb_strlen($details);
@@ -93,7 +99,7 @@ final class Validator
         }
 
         return [
-            'data' => compact('name', 'ic', 'phone', 'details', 'location', 'lat', 'lng'),
+            'data' => compact('name', 'ic', 'phone', 'email', 'details', 'location', 'lat', 'lng'),
             'errors' => $errors,
         ];
     }

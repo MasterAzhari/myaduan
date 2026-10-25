@@ -19,7 +19,7 @@
     viewer: 'Lihat angka ringkasan dan dashboard sahaja. Tidak nampak butiran pengadu.',
   };
   const EVENT = {
-    CIPTA: 'Aduan diterima', CLASSIFY: 'Dikelaskan', ASSIGN: 'Ditugaskan', ACCEPT: 'Tugasan diterima', ACTION: 'Tindakan direkod',
+    CIPTA: 'Aduan diterima', IMPORT: 'Diimport dari Google Sheet lama', CLASSIFY: 'Dikelaskan', ASSIGN: 'Ditugaskan', ACCEPT: 'Tugasan diterima', ACTION: 'Tindakan direkod',
     COMMENT: 'Catatan dalaman', REQUEST_CLOSE: 'Mohon penutupan', APPROVE_CLOSE: 'Disahkan & ditutup', RETURN: 'Dikembalikan untuk tindakan',
     REOPEN: 'Dibuka semula', PUBLISH: 'Mesej awam dikemas kini',
   };
@@ -351,6 +351,7 @@
           ['No. KP', formatIc(c.complainant.ic)],
           ['Telefon', phone ? h('span', {}, h('a', { href: 'tel:+' + phone }, '+' + phone), ' · ',
             h('a', { href: 'https://wa.me/' + phone, target: '_blank', rel: 'noopener' }, 'WhatsApp')) : null],
+          ['E-mel', c.complainant.email ? h('a', { href: 'mailto:' + c.complainant.email }, c.complainant.email) : null],
         ])),
       h('section', { class: 'card' },
         h('h2', {}, 'Maklumat kes'),
@@ -594,7 +595,8 @@
       return '—';
     };
     const rows = users.map((u) => h('tr', { class: u.active ? '' : 'inactive' },
-      h('td', { 'data-label': 'Nama', class: 'main-col' }, h('span', { class: 'title' }, u.name), h('small', {}, u.email)),
+      h('td', { 'data-label': 'Nama', class: 'main-col' }, h('span', { class: 'title' }, u.name), h('small', {}, u.email),
+        u.email_ok ? null : h('small', { class: 'bad-text' }, `Bukan e-mel @${cfg.staff_domain}. Sila tukar.`)),
       h('td', { 'data-label': 'Peranan' }, ROLE[u.role], u.site_admin ? h('small', {}, 'Pentadbir laman') : null),
       h('td', { 'data-label': 'Kategori', class: 'cats' }, policyText(u)),
       h('td', { 'data-label': 'Kes terbuka' }, String(u.open_cases)),
@@ -660,7 +662,8 @@
       h('h2', {}, isNew ? 'Tambah pengguna' : 'Ubah ' + u.name),
       h('div', { class: 'two' },
         field('Nama penuh', h('input', { name: 'name', value: u?.name || '', autocomplete: 'off', required: true })),
-        field('E-mel', h('input', { name: 'email', type: 'email', value: u?.email || '', autocomplete: 'off', required: true }), { help: isNew ? 'Pautan tetapan kata laluan dihantar ke e-mel ini.' : null })),
+        field('E-mel', h('input', { name: 'email', type: 'email', value: u?.email || '', autocomplete: 'off', required: true, placeholder: `nama@${cfg.staff_domain}` }),
+          { help: `Mesti e-mel @${cfg.staff_domain}.` + (isNew ? ' Pautan tetapan kata laluan dihantar ke e-mel ini.' : '') })),
       roleBox, policyBox,
       isNew ? null : h('label', { class: 'check field wide' }, h('input', { type: 'checkbox', name: 'active', checked: u.active }), 'Akaun aktif (boleh log masuk)'),
       !isNew && u.open_cases ? h('p', { class: 'muted small' }, `Pengguna ini memegang ${u.open_cases} kes terbuka. Tugaskan semula kes tersebut sebelum menyahaktifkan atau membuang kategorinya.`) : null,

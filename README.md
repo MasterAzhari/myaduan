@@ -41,14 +41,28 @@ Status: **Fasa 3**. Ada database, peranan, aliran status, REST API, borang awam,
 
 ### E-mel
 
-Dihantar melalui `wp_mail` dari queue `wp_myaduan_mail_queue`, setiap 5 minit, cuba 3 kali. E-mel tak mengandungi nama, IC atau telefon pengadu, cuma rujukan dan link portal.
+Dihantar melalui `wp_mail` dari queue `wp_myaduan_mail_queue`, setiap 5 minit, cuba 3 kali. Semua e-mel MyAduan dihantar **dari `info@myaduan.my`** (Tetapan → MyAduan → E-mel penghantar, mesti @myaduan.my). E-mel kepada staf tak mengandungi nama, IC atau telefon pengadu, cuma rujukan dan link portal.
 
 - Aduan baru → e-mel notifikasi (atau semua Super Admin)
+- Aduan baru → **pengadu**, jika dia isi e-mel (pilihan) dalam borang: nombor rujukan + link semak status. E-mel pengadu disimpan bersulit; alamat dalam queue dipadam lepas dihantar.
 - Kes ditugaskan → pegawai berkenaan
 - Mohon penutupan → e-mel notifikasi
 - Dikembalikan untuk tindakan → pegawai berkenaan
 
-Pada Hostinger, pasang plugin SMTP (contoh WP Mail SMTP) dengan peti `noreply@myaduan.my` supaya e-mel tak masuk spam.
+Pada Hostinger, cipta mailbox `info@myaduan.my` dan pasang plugin SMTP (contoh WP Mail SMTP) guna mailbox itu supaya e-mel tak masuk spam.
+
+### Import dari Google Sheet lama
+
+Tetapan → MyAduan → **Import aduan dari Google Sheet lama**. Dalam Google Sheet, buka tab `ADUAN` → File → Download → CSV, kemudian upload. Atau melalui SSH: `wp myaduan import-sheet aduan.csv`.
+
+- Nombor rujukan asal dikekalkan; rujukan yang sudah ada dilangkau, jadi selamat diulang.
+- Nama, IC, telefon dan e-mel disulitkan seperti aduan baru. Alamat rumah dan poskod pengadu tidak disimpan.
+- Status lama: BARU → DITERIMA, MENUNGGU MAKLUM BALAS → DALAM TINDAKAN, SELESAI → MENUNGGU PENGESAHAN. Pegawai, catatan dan kategori asal disimpan dalam sejarah kes (event `IMPORT`).
+- Gambar dari `Gambar_Bukti_URL` dimuat turun dari Google Drive (maks 3 setiap kes) jika fail dikongsi "Anyone with the link". Yang gagal kekal sebagai link dalam sejarah; import semula akan cuba lagi untuk kes yang belum ada gambar.
+
+### Akaun staf: wajib @myaduan.my
+
+Akaun admin, Super Admin dan pegawai yang dicipta atau diubah dalam portal mesti guna e-mel `@myaduan.my`. E-mel notifikasi dan e-mel penghantar pun mesti @myaduan.my; alamat lain dibuang semasa simpan. Akaun lama dengan domain lain ditanda merah dalam senarai Pengguna dan perlu ditukar sebelum perubahan lain boleh disimpan.
 
 ### Kunci sulitan: WAJIB backup
 

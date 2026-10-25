@@ -68,6 +68,7 @@ await next();
 await form.locator('#f-ic').pressSequentially('880512105432');
 assert(await form.locator('#f-ic').inputValue() === '880512-10-5432', 'IC diformat automatik');
 await form.locator('#f-phone').fill('012-987 6543');
+await form.locator('#f-email').fill('siti@contoh.com');
 await next();
 assert((await form.locator('.review').textContent()).includes('1 gambar dipilih'), 'semakan tunjuk semua jawapan');
 

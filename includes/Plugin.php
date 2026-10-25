@@ -20,6 +20,7 @@ final class Plugin
         Mailer::register();
         Frontend::register();
         Portal::register();
+        Import::register();
         Home::register();
         add_filter('wp_authenticate_user', [Users::class, 'block_inactive']);
     }
