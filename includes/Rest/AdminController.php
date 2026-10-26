@@ -155,6 +155,9 @@ final class AdminController extends Controller
             if (current_user_can(Access::CAP_MANAGE)) {
                 $users = get_users(['capability__in' => [Access::CAP_WORK, Access::CAP_MANAGE], 'orderby' => 'display_name', 'fields' => 'all']);
                 foreach ($users as $u) {
+                    if (Users::is_outside_admin($u)) {
+                        continue;
+                    }
                     $a = Access::actor($u);
                     $officers[] = ['id' => $a['id'], 'name' => $a['name'], 'manager' => $a['manager'], 'policy' => $a['policy']];
                 }

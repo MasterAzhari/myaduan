@@ -88,6 +88,20 @@ final class Phase3Test extends TestCase
         $this->assertContains('t_viewer', $logins);
     }
 
+    public function test_hosting_admin_without_staff_email_is_left_out(): void
+    {
+        $outside = wp_insert_user(['user_login' => 't_hostadmin', 'user_pass' => wp_generate_password(), 'user_email' => 't_hostadmin@gmail.com', 'role' => 'administrator']);
+        $this->assertIsInt($outside);
+        $this->created[] = $outside;
+        $staff = $this->make_user('t_staffadmin', 'administrator');
+        $logins = array_column($this->call('GET', '/admin/users', [], 'super')[1], 'login');
+        $this->assertNotContains('t_hostadmin', $logins, 'not a MyAduan account');
+        $this->assertContains('t_staffadmin', $logins, 'a site admin with a staff e-mail stays listed');
+        $officers = array_column($this->call('GET', '/admin/catalog', [], 'super')[1]['officers'], 'id');
+        $this->assertNotContains($outside, $officers, 'cannot be picked to hold a case');
+        $this->assertContains($staff, $officers);
+    }
+
     public function test_create_officer_with_password(): void
     {
         [$status, $u] = $this->call('POST', '/admin/users', [
