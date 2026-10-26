@@ -10,8 +10,9 @@ if (!defined('ABSPATH')) {
 /**
  * MyAduan accounts managed from the portal by a Super Admin.
  *
- * Site administrators are listed but stay read-only here: they are managed in
- * WordPress itself. Accounts with a staff e-mail but no MyAduan role (made in
+ * Site administrators with a staff e-mail are listed but stay read-only here: they
+ * are managed in WordPress itself. Other site administrators (the hosting's own
+ * admin login) are left out. Accounts with a staff e-mail but no MyAduan role (made in
  * wp-admin, say) are listed too, so a Super Admin can give them a role here. Deactivating removes the role (and every session) but keeps
  * the account, so case history still shows who did what.
  *
@@ -39,8 +40,8 @@ final class Users
             return [];
         }
         $open = $this->open_cases($ids);
-        $users = get_users(['include' => $ids, 'orderby' => 'display_name']);
-        return array_map(fn(\WP_User $u): array => $this->shape($u, $open[$u->ID] ?? []), $users);
+        $users = array_filter(get_users(['include' => $ids, 'orderby' => 'display_name']), static fn(\WP_User $u): bool => !self::is_outside_admin($u));
+        return array_values(array_map(fn(\WP_User $u): array => $this->shape($u, $open[$u->ID] ?? []), $users));
     }
 
     public const PASSWORD_MIN = 8;
@@ -172,6 +173,17 @@ final class Users
         if (is_wp_error($done)) {
             throw new FieldErrors(['password' => $done->get_error_message()]);
         }
+    }
+
+    /**
+     * A WordPress site administrator with no MyAduan role and no staff e-mail (the hosting's own
+     * admin login, say). It can still open the portal, but is left out of the staff lists.
+     */
+    public static function is_outside_admin(\WP_User $u): bool
+    {
+        return user_can($u, 'manage_options')
+            && !array_intersect($u->roles, array_values(self::ROLES))
+            && !Settings::is_staff_email($u->user_email);
     }
 
     /** MyAduan accounts other than site administrators. */
