@@ -1,0 +1,226 @@
+[
+  {
+    "id": "S01",
+    "title": "Pembukaan: Pelancaran MyAduan",
+    "dur": 10,
+    "frames": [
+      0.7,
+      8.5
+    ],
+    "captions": [
+      "",
+      "MyAduan. Suara anda, perhatian kami."
+    ],
+    "visual": "Video gimik pelancaran (6 saat) dimainkan penuh: cahaya emas berkumpul ke tengah, dentuman, logo MyAduan muncul bersama sinar, cop \"Dilancarkan Secara Rasmi\", bunga api dan confetti. Logo kekal 4 saat sebagai peralihan ke scene seterusnya.",
+    "audio": "Kesan bunyi gimik (riser, boom, whoosh, brass, bunga api). Muzik latar korporat bermula perlahan pada saat ke-6.",
+    "vo": "(Tiada suara pada 6 saat pertama.) MyAduan. Suara anda, perhatian kami."
+  },
+  {
+    "id": "S02",
+    "title": "Aluan: Parlimen Gombak",
+    "dur": 20,
+    "frames": [
+      4.0,
+      14.0
+    ],
+    "captions": [
+      "Parlimen Gombak: Sungai Tua, Gombak Setia dan Hulu Kelang.",
+      "Setiap suara rakyat didengar dan diambil tindakan."
+    ],
+    "visual": "Tajuk \"Parlimen Gombak\" muncul, diikuti tiga lencana DUN (Sungai Tua, Gombak Setia, Hulu Kelang) yang masuk satu demi satu. Kemudian kad inisiatif YAB Dato' Seri Amirudin Shari menggelongsor masuk dari kanan.",
+    "audio": "Muzik latar korporat, ceria dan perlahan. Whoosh lembut ketika kad masuk.",
+    "vo": "Assalamualaikum dan salam sejahtera. Parlimen Gombak merangkumi tiga kawasan DUN: Sungai Tua, Gombak Setia dan Hulu Kelang. Atas inisiatif YAB Dato' Seri Amirudin Shari, Menteri Besar Selangor merangkap Ahli Parlimen Gombak, setiap suara rakyat kini didengar dan diambil tindakan."
+  },
+  {
+    "id": "S03",
+    "title": "Masalah: Aduan tak berjejak",
+    "dur": 25,
+    "frames": [
+      5.0,
+      18.0
+    ],
+    "captions": [
+      "Aduan datang dari pelbagai arah: WhatsApp, panggilan, surat.",
+      "Aduan saya sampai ke mana?"
+    ],
+    "visual": "Ikon saluran lama (WhatsApp, telefon, surat, kaunter) terapung berselerak dan bertindih. Garis putus-putus berselirat antara ikon. Kemudian semua ikon pudar ke kelabu dan satu gelembung soalan besar muncul: \"Aduan saya sampai ke mana?\"",
+    "audio": "Muzik latar menjadi lebih perlahan dan tegang. Bunyi notifikasi bertindih (ding) ketika ikon muncul.",
+    "vo": "Sebelum ini, aduan datang dari pelbagai arah. Ada yang melalui WhatsApp, ada yang menelefon, ada yang menulis surat atau datang sendiri ke pejabat. Maklumat berselerak dan aduan mudah tercicir. Pengadu pula tertanya-tanya: aduan saya sampai ke mana? Siapa yang menguruskannya? Bila akan selesai?"
+  },
+  {
+    "id": "S04",
+    "title": "Memperkenalkan MyAduan",
+    "dur": 25,
+    "frames": [
+      5.0,
+      18.0
+    ],
+    "captions": [
+      "MyAduan: saluran aduan rasmi Parlimen Gombak.",
+      "Percuma, tanpa daftar akaun, siap dalam 3 minit."
+    ],
+    "visual": "Skrin bertukar cerah. Laptop memaparkan halaman utama myaduan.my, logo MyAduan berdenyut di sudut. Telefon masuk dari kanan memaparkan versi telefon, dan tiga lencana muncul: Percuma, Tak perlu daftar akaun, Siap dalam 3 minit.",
+    "audio": "Muzik latar naik semula, lebih bersemangat. Bunyi \"pop\" untuk setiap lencana.",
+    "vo": "Kerana itu, kami memperkenalkan MyAduan, saluran aduan rasmi dalam talian Parlimen Gombak. Semuanya di satu tempat: myaduan.my. Percuma, tidak perlu mendaftar akaun, dan boleh disiapkan dalam masa tiga minit terus dari telefon anda."
+  },
+  {
+    "id": "S05",
+    "title": "Langkah 1: Mulakan aduan",
+    "dur": 30,
+    "frames": [
+      6.0,
+      20.0
+    ],
+    "captions": [
+      "Layari myaduan.my dan tekan Buat Aduan Sekarang.",
+      "Kecemasan? Sistem terus paparkan butang hubungi 999."
+    ],
+    "visual": "Telefon memaparkan halaman utama; animasi jari menekan butang \"Buat Aduan Sekarang\" (riak sentuhan). Peralihan ke borang langkah pertama dalam bingkai pelayar: \"Adakah ini kecemasan?\". Kotak \"Hubungi 999\" diserlahkan dengan bingkai berdenyut.",
+    "audio": "Bunyi klik/tap. Whoosh ketika bertukar ke borang.",
+    "vo": "Membuat aduan sangat mudah. Layari myaduan.my dan tekan Buat Aduan Sekarang. Borang akan membimbing anda satu langkah pada satu masa. Soalan pertama ialah keselamatan anda. Jika ada kecemasan yang mengancam nyawa, kebakaran atau jenayah, sistem terus memaparkan butang untuk menghubungi 999."
+  },
+  {
+    "id": "S06",
+    "title": "Langkah 2: Ceritakan masalah",
+    "dur": 35,
+    "frames": [
+      7.0,
+      24.0
+    ],
+    "captions": [
+      "Terangkan masalah, nyatakan lokasi atau guna GPS.",
+      "Hingga 3 gambar. Data peribadi anda disulitkan."
+    ],
+    "visual": "Telefon memaparkan borang langkah gambar dan skrin skrol perlahan. Lencana muncul di kiri: Butiran masalah, Lokasi + GPS, Hingga 3 gambar. Pada separuh kedua, ikon mangga kunci muncul dengan lencana: Data peribadi disulitkan, Lokasi dalam gambar dibuang.",
+    "audio": "Bunyi kamera (shutter) ketika lencana gambar muncul. Bunyi \"klik kunci\" untuk lencana privasi.",
+    "vo": "Seterusnya, terangkan masalah anda: apa yang berlaku dan sejak bila. Nyatakan lokasinya, atau tekan butang GPS supaya pegawai tahu tempat yang tepat. Anda juga boleh melampirkan sehingga tiga keping gambar. Privasi anda terjaga: nama, nombor kad pengenalan dan telefon anda disimpan secara bersulit."
+  },
+  {
+    "id": "S07",
+    "title": "Langkah 3: Semak dan hantar",
+    "dur": 25,
+    "frames": [
+      5.0,
+      17.0
+    ],
+    "captions": [
+      "Semak semula. Tersilap? Tekan Ubah.",
+      "Simpan nombor rujukan untuk menjejak aduan."
+    ],
+    "visual": "Telefon memaparkan skrin \"Semuanya sudah betul?\" dengan butang Ubah diserlahkan. Kemudian bertukar ke skrin \"Terima kasih. Aduan anda diterima.\" dan kamera zum ke kotak nombor rujukan GOM-2026xxxx.",
+    "audio": "Bunyi \"berjaya\" (chime naik) ketika aduan dihantar.",
+    "vo": "Sebelum menghantar, semak semula semua maklumat. Ada yang tersilap? Tekan sahaja Ubah. Selepas dihantar, anda terus menerima nombor rujukan. Simpan nombor ini, kerana ia kunci untuk menjejak aduan anda."
+  },
+  {
+    "id": "S08",
+    "title": "Jejak status bila-bila masa",
+    "dur": 25,
+    "frames": [
+      5.0,
+      18.0
+    ],
+    "captions": [
+      "Masukkan nombor rujukan atau No. kad pengenalan.",
+      "Diterima, Dalam Semakan, Dalam Tindakan, hingga Ditutup."
+    ],
+    "visual": "Telefon memaparkan halaman Semak Status; teks nombor rujukan ditaip satu demi satu. Kemudian garis masa lima status muncul dan bar kemajuan bergerak dari Diterima ke Ditutup.",
+    "audio": "Bunyi papan kekunci menaip. Bunyi \"tik\" untuk setiap status.",
+    "vo": "Untuk mengetahui perkembangan aduan, pilih Semak Status dan masukkan nombor rujukan atau nombor kad pengenalan anda. Anda boleh lihat di mana aduan anda berada: Diterima, Dalam Semakan, Dalam Tindakan, Menunggu Pengesahan, hinggalah Ditutup."
+  },
+  {
+    "id": "S09",
+    "title": "Di belakang tabir: Portal Admin",
+    "dur": 30,
+    "frames": [
+      6.0,
+      21.0
+    ],
+    "captions": [
+      "Setiap aduan masuk terus ke Portal Admin MyAduan.",
+      "Super Admin kelaskan dan tugaskan pegawai."
+    ],
+    "visual": "Laptop memaparkan senarai kes di Portal Admin. Kiraan ringkas (belum dikelaskan, belum ditugaskan, lewat susulan) diserlahkan satu demi satu. Kemudian paparan butiran kes dengan pegawai yang ditugaskan diserlahkan.",
+    "audio": "Muzik latar stabil. Whoosh ketika bertukar paparan.",
+    "vo": "Di belakang tabir, setiap aduan masuk terus ke Portal Admin MyAduan. Super Admin mengelaskan aduan mengikut kategori dan kawasan, lalu menugaskan pegawai yang bertanggungjawab. Paparan ringkas menunjukkan aduan yang belum ditugaskan dan yang lewat disusuli, supaya tiada aduan terlepas pandang."
+  },
+  {
+    "id": "S10",
+    "title": "Pegawai bertindak, agensi dimaklumkan",
+    "dur": 30,
+    "frames": [
+      6.0,
+      20.0
+    ],
+    "captions": [
+      "Pegawai terima notifikasi terus di telefon.",
+      "Kes boleh dipanjangkan kepada agensi berkaitan."
+    ],
+    "visual": "Telefon pegawai memaparkan butiran kes; notifikasi push \"Tugasan baharu\" turun dari atas skrin. Kemudian rajah aliran: Kes, Pegawai, Agensi (e-mel), Balasan agensi, Sejarah kes, dengan anak panah bergerak.",
+    "audio": "Bunyi notifikasi telefon. Whoosh untuk setiap anak panah.",
+    "vo": "Pegawai yang ditugaskan menerima notifikasi terus di telefon. Dari lapangan, pegawai boleh merekod tindakan atau memanjangkan kes kepada agensi berkaitan. E-mel dihantar kepada agensi tanpa mendedahkan maklumat peribadi pengadu, dan balasan agensi direkodkan terus dalam sejarah kes."
+  },
+  {
+    "id": "S11",
+    "title": "Kes selesai, rakyat dimaklumkan",
+    "dur": 25,
+    "frames": [
+      5.0,
+      17.0
+    ],
+    "captions": [
+      "Pegawai mohon tutup, Super Admin sahkan.",
+      "Status bertukar kepada Ditutup."
+    ],
+    "visual": "Telefon pegawai memaparkan kes berstatus Menunggu Pengesahan. Kemudian cop besar \"DITUTUP\" dengan tanda semak hijau menghentak ke atas kad semakan status.",
+    "audio": "Bunyi cop (thud) dan chime kejayaan.",
+    "vo": "Apabila kerja selesai, pegawai memohon penutupan kes, dan Super Admin menyemak serta mengesahkannya. Status aduan bertukar kepada Ditutup, dan pengadu boleh melihatnya sendiri. Jika masalah berulang, kes boleh dibuka semula."
+  },
+  {
+    "id": "S12",
+    "title": "Manfaat untuk masyarakat",
+    "dur": 35,
+    "frames": [
+      8.0,
+      26.0
+    ],
+    "captions": [
+      "Jimat masa. Rasmi. Sampai kepada pegawai yang betul.",
+      "Lebih 50 jenis aduan, dari jalan hingga kebajikan."
+    ],
+    "visual": "Empat kad manfaat muncul satu demi satu: Jimat masa, Rekod rasmi, Sampai kepada pegawai yang betul, Boleh dijejak hingga selesai. Kemudian grid 12 kumpulan kategori aduan (Infrastruktur, Utiliti, Alam Sekitar, Kebajikan & Kesihatan, Pendidikan, dan lain-lain) menyala satu demi satu.",
+    "audio": "Muzik latar naik ke bahagian paling ceria. Bunyi \"pop\" untuk setiap kad.",
+    "vo": "Apa maknanya untuk anda? Tidak perlu lagi beratur di pejabat atau menunggu panggilan yang tidak berjawab. Aduan anda direkod secara rasmi, sampai kepada pegawai yang betul, dan boleh dijejak sehingga selesai. MyAduan menerima lebih 50 jenis aduan, daripada jalan berlubang, longkang tersumbat dan lampu jalan rosak, hinggalah urusan kebajikan, kesihatan dan pendidikan."
+  },
+  {
+    "id": "S13",
+    "title": "Selamat dan telus",
+    "dur": 20,
+    "frames": [
+      6.0,
+      14.0
+    ],
+    "captions": [
+      "Data peribadi disulitkan. Setiap akses direkodkan.",
+      "Setiap tindakan boleh dipertanggungjawabkan."
+    ],
+    "visual": "Perisai besar dengan ikon mangga kunci muncul di tengah, dikelilingi tiga titik: Data disulitkan, Gambar disimpan secara peribadi, Akses direkodkan. Kemudian telefon memaparkan senarai peranan pengguna portal.",
+    "audio": "Bunyi \"klik kunci\". Muzik latar tenang.",
+    "vo": "MyAduan dibina dengan keselamatan sebagai keutamaan. Data peribadi disulitkan, gambar disimpan secara peribadi, dan setiap akses kepada butiran kes direkodkan. Setiap tindakan pegawai tercatat, jadi setiap aduan boleh dipertanggungjawabkan."
+  },
+  {
+    "id": "S14",
+    "title": "Seruan: Jom guna MyAduan",
+    "dur": 25,
+    "frames": [
+      8.0,
+      22.0
+    ],
+    "captions": [
+      "Nampak masalah? Ambil gambar, adukan di myaduan.my.",
+      "MyAduan. Suara anda, perhatian kami."
+    ],
+    "visual": "Kod QR besar ke myaduan.my muncul bersama telefon dan teks \"Imbas & adukan\". Kemudian penutup: logo MyAduan bersinar, slogan \"Suara anda. Perhatian kami.\", alamat myaduan.my dan \"Parlimen Gombak\".",
+    "audio": "Muzik latar memuncak dan tamat dengan nota akhir. Bunyi kilauan (shimmer) pada logo.",
+    "vo": "Jadilah mata dan telinga kawasan anda. Nampak masalah? Ambil gambar dan adukan di myaduan.my, atau imbas kod QR ini. Kongsikan dengan keluarga dan jiran. Bersama, kita jadikan Gombak tempat yang lebih baik. MyAduan, Parlimen Gombak. Suara anda, perhatian kami."
+  }
+]

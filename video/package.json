@@ -1,0 +1,18 @@
+{
+  "name": "myaduan-video",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "gimik": "python3 sfx.py public/sfx.wav && remotion render src/index.ts S01 out/gimik.mp4",
+    "penuh": "python3 sfx.py public/sfx.wav && remotion render src/index.ts Penuh out/penerangan.mp4",
+    "stills": "node stills.mjs"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.538",
+    "@remotion/cli": "4.0.538",
+    "@remotion/renderer": "4.0.538",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.538"
+  }
+}
