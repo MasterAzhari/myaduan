@@ -145,7 +145,7 @@ final class Cases
         $own = $this->db->prepare('c.owner_id = %d', $actor['id']);
         $policy = $actor['policy'];
         if ($policy['mode'] === 'all') {
-            return "($own OR c.category_code IS NOT NULL)";
+            return '1=1';
         }
         if ($policy['mode'] === 'selected' && $policy['codes']) {
             $in = implode(',', array_map(fn(string $code): string => $this->db->prepare('%s', $code), $policy['codes']));

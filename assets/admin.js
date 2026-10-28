@@ -308,6 +308,8 @@
 
     const cards = [];
     const card = (label, n, q, tone) => cards.push(h('a', { class: 'stat ' + (tone || ''), href: hashFor('/kes', q) }, h('strong', {}, n), h('span', {}, label)));
+    const seesNew = me.can.manage || (me.policy && me.policy.mode === 'all');
+    if (!me.can.manage && seesNew) card('Aduan baru (belum dikelaskan)', stats.unclassified, { category: 'none', flag: 'open' }, stats.unclassified ? 'warn' : '');
     if (me.can.manage) {
       card('Belum dikelaskan', stats.unclassified, { category: 'none', flag: 'open' }, stats.unclassified ? 'warn' : '');
       card('Belum ditugaskan', stats.unassigned, { owner: 'unassigned', flag: 'open' }, stats.unassigned ? 'warn' : '');
@@ -337,7 +339,7 @@
       field('No. KP pengadu', h('input', { name: 'ic', inputmode: 'numeric', value: query.ic || '', placeholder: '880512-10-5432', autocomplete: 'off' })),
       field('Status', select('status', [{ value: '', label: 'Semua status' }, ...state.catalog.statuses.map((s) => ({ value: s, label: s }))], query.status)),
       field('Keadaan', select('flag', [{ value: '', label: 'Semua' }, ...Object.entries(FLAGS).map(([value, label]) => ({ value, label }))], query.flag)),
-      field('Kategori', select('category', categoryOptions([{ value: '', label: 'Semua kategori' }, ...(me.can.manage ? [{ value: 'none', label: 'Belum dikelaskan' }] : [])]), query.category)),
+      field('Kategori', select('category', categoryOptions([{ value: '', label: 'Semua kategori' }, ...(seesNew ? [{ value: 'none', label: 'Belum dikelaskan' }] : [])]), query.category)),
       field('DUN', select('dun', dunOptions([{ value: '', label: 'Semua DUN' }, { value: 'none', label: 'Belum ditetapkan' }]), query.dun)),
       field('Pegawai', select('owner', ownerOpts, query.owner)),
       field('Dari', h('input', { name: 'from', type: 'date', value: query.from || '' })),
