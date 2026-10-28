@@ -15,6 +15,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
             'super' => self::user('t_super', 'myaduan_superadmin', null),
             'a01' => self::user('t_officer_a01', 'myaduan_officer', ['mode' => 'selected', 'codes' => ['A01']]),
             'a02' => self::user('t_officer_a02', 'myaduan_officer', ['mode' => 'selected', 'codes' => ['A02']]),
+            'all' => self::user('t_officer_all', 'myaduan_officer', ['mode' => 'all']),
             'viewer' => self::user('t_viewer', 'myaduan_viewer', null),
         ];
     }

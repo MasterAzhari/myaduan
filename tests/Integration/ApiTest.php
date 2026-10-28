@@ -80,7 +80,7 @@ final class ApiTest extends TestCase
         $this->assertSame(200, $this->call('GET', '/admin/stats', [], 'viewer')[0]);
     }
 
-    public function test_unclassified_cases_are_super_admin_only(): void
+    public function test_unclassified_cases_need_super_admin_or_all_categories(): void
     {
         $id = $this->case_id($this->submit()['reference']);
         [, $super] = $this->call('GET', '/admin/cases', [], 'super');
@@ -90,6 +90,12 @@ final class ApiTest extends TestCase
         [, $officer] = $this->call('GET', '/admin/cases', [], 'a01');
         $this->assertSame(0, $officer['total']);
         $this->assertSame(404, $this->call('GET', "/admin/cases/$id", [], 'a01')[0]);
+
+        // An officer with "Semua kategori" sees new complaints before Super Admin triage.
+        [, $all] = $this->call('GET', '/admin/cases', [], 'all');
+        $this->assertSame(1, $all['total']);
+        $this->assertSame(200, $this->call('GET', "/admin/cases/$id", [], 'all')[0]);
+        $this->assertSame(1, $this->call('GET', '/admin/stats', [], 'all')[1]['unclassified']);
     }
 
     public function test_full_workflow_through_api(): void

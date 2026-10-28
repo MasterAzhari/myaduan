@@ -7,6 +7,7 @@ namespace MyAduan;
  * - Super Admin (cap myaduan_manage): everything, including unclassified cases.
  * - Pegawai (cap myaduan_work_cases): every case in their permitted categories,
  *   plus any case assigned to them; may change only cases assigned to them.
+ *   A Pegawai with "Semua kategori" also sees new, unclassified complaints.
  * - Pemerhati (cap myaduan_view_reports only): dashboard numbers, no case detail.
  */
 final class Access
@@ -33,7 +34,8 @@ final class Access
     public static function policy_allows(array $policy, ?string $category): bool
     {
         if ($category === null || $category === '') {
-            return false; // Unclassified intake is triaged by Super Admin only.
+            // Unclassified intake: Super Admin, and officers who cover every category.
+            return ($policy['mode'] ?? 'none') === 'all';
         }
         return match ($policy['mode'] ?? 'none') {
             'all' => true,

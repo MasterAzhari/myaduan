@@ -81,6 +81,10 @@ final class ValidatorCryptoAccessTest extends TestCase
         $this->assertFalse(Access::can_view($officer, ['owner_id' => 0, 'category_code' => null]), 'unclassified is Super Admin only');
         $this->assertTrue(Access::can_view($officer, ['owner_id' => 7, 'category_code' => 'A02']), 'own case always visible');
 
+        $all = ['id' => 8, 'manager' => false, 'work' => true, 'policy' => Access::normalize_policy(['mode' => 'all'])];
+        $this->assertTrue(Access::can_view($all, ['owner_id' => 0, 'category_code' => null]), 'all-category officers see new intake');
+        $this->assertTrue(Access::can_own($all, null));
+
         $viewer = ['id' => 9, 'manager' => false, 'work' => false, 'policy' => Access::normalize_policy(['mode' => 'all'])];
         $this->assertFalse(Access::can_view($viewer, ['owner_id' => 0, 'category_code' => 'A01']));
 
