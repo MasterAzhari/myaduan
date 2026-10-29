@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const DRAFT_KEY = 'myaduan-borang-v2';
+  const DRAFT_KEY = 'myaduan-borang-v3';
   const MAX_IMAGES = 3;
   const MAX_BYTES = 5 * 1024 * 1024;
   const RESIZE_SIDE = 2000;
@@ -70,7 +70,7 @@
   }
 
   const DUNS = 'Sungai Tua · Gombak Setia · Hulu Kelang';
-  const STAGES = ['Mulakan', 'Keselamatan', 'Butiran masalah', 'Lokasi & gambar', 'Maklumat anda', 'Semakan'];
+  const STAGES = ['Lokasi & gambar', 'Maklumat anda'];
 
   /** Small line icons (stroke follows currentColor). */
   const ICONS = {
@@ -122,7 +122,7 @@
             h('div', {},
               h('p', { class: 'eyebrow gold' }, 'SALURAN ADUAN MASYARAKAT'),
               h('h2', {}, 'Suara anda.', h('br'), 'Perhatian kami.'),
-              h('p', { class: 'side-intro' }, 'Bantu kami memahami masalah di kawasan anda, satu langkah pada satu masa.')),
+              h('p', { class: 'side-intro' }, this.mode === 'form' ? 'Dua langkah sahaja: lokasi dan gambar, kemudian maklumat anda.' : 'Semak perkembangan aduan anda pada bila-bila masa.')),
             this.side,
             h('div', { class: 'side-foot' }, icon('shield', 21), h('p', {}, 'Maklumat anda digunakan untuk pengurusan dan tindakan aduan sahaja.'))),
           h('main', { class: 'main' },
@@ -161,26 +161,21 @@
     render() {
       this.state = this.loadDraft();
       this.files = [];
-      this.editing = false;
+      // Two pages only: where and what (with photos), then who. DUN and taman are filled in by the Super Admin in the portal.
       this.steps = [
-        { stage: 1, kicker: 'Keselamatan anda dahulu', q: 'Adakah ini kecemasan?', lead: 'Adakah kejadian sedang mengancam nyawa, melibatkan kebakaran atau jenayah yang sedang berlaku?', body: () => this.stepEmergency(), check: () => this.checkEmergency() },
-        { stage: 2, kicker: 'Butiran masalah', q: 'Ceritakan apa yang berlaku.', lead: 'Terangkan masalah, bila ia bermula dan kesannya kepada penduduk.', body: () => this.stepDetails(), check: () => this.checkFields(['details']) },
-        { stage: 3, kicker: 'Lokasi & gambar', q: 'Di mana lokasi tepat masalah?', lead: 'Masukkan alamat, nama jalan, taman atau mercu tanda.', body: () => this.stepLocation(), check: () => this.checkFields(['location']) },
-        { stage: 3, kicker: 'Lokasi & gambar', q: 'Ada gambar untuk dikongsikan?', lead: 'Gambar membantu pegawai memahami masalah. Langkah ini pilihan.', body: () => this.stepImages(), check: () => this.pendingCheck() },
-        { stage: 4, kicker: 'Maklumat anda', q: 'Siapakah nama anda?', lead: 'Nama ini digunakan untuk urusan aduan anda.', body: () => this.stepName(), check: () => this.checkFields(['name']) },
-        { stage: 4, kicker: 'Maklumat anda', q: 'Bagaimana kami boleh hubungi anda?', lead: 'No. kad pengenalan digunakan untuk semak status. Nombor telefon untuk pegawai menghubungi anda.', body: () => this.stepContact(), check: () => this.checkFields(['ic', 'phone', 'email']) },
-        { stage: 5, kicker: 'Semakan', q: 'Semuanya sudah betul?', lead: 'Semak maklumat di bawah. Tekan Ubah untuk membetulkan jawapan.', body: () => this.stepReview(), check: () => this.checkFields(['consent']) },
+        { stage: 0, kicker: 'Lokasi & gambar', q: 'Di mana masalahnya?', lead: 'Tulis lokasi dan sertakan gambar. Pegawai kami akan uruskan selebihnya.', body: () => this.stepWhere(), check: () => this.checkWhere() },
+        { stage: 1, kicker: 'Maklumat anda', q: 'Siapa yang membuat aduan?', lead: 'No. kad pengenalan digunakan untuk semak status. Nombor telefon untuk pegawai menghubungi anda.', body: () => this.stepWho(), check: () => this.checkFields(['name', 'ic', 'phone', 'email', 'consent']) },
       ];
-      if (this.state.step >= this.steps.length) this.state.step = -1;
+      if (!(this.state.step >= 0 && this.state.step < this.steps.length)) this.state.step = 0;
       this.show();
     }
 
     loadDraft() {
       try {
         const saved = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null');
-        if (saved && saved.key && saved.fields) return { step: -1, ...saved, restored: saved.step >= 0 };
+        if (saved && saved.key && saved.fields) return { step: 0, ...saved, restored: true };
       } catch (e) { /* storage blocked */ }
-      return { key: newKey(), fields: {}, coords: null, step: -1 };
+      return { key: newKey(), fields: {}, coords: null, step: 0 };
     }
 
     saveDraft() {
@@ -190,14 +185,13 @@
 
     clearDraft() {
       try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
-      this.state = { key: newKey(), fields: {}, coords: null, step: -1 };
+      this.state = { key: newKey(), fields: {}, coords: null, step: 0 };
     }
 
     // ---- frame ----
 
     renderStages() {
-      const step = this.state.step;
-      const current = step < 0 ? 0 : this.steps[step].stage;
+      const current = this.steps[this.state.step].stage;
       this.side.replaceChildren(h('nav', { class: 'stages', 'aria-label': 'Peringkat aduan' },
         STAGES.map((name, i) => h('div', { class: 'stage' + (i === current ? ' active' : '') + (i < current ? ' done' : '') },
           h('span', { class: 'dot' }, i < current ? icon('check', 16) : String(i + 1).padStart(2, '0')),
@@ -211,28 +205,23 @@
       this.renderStages();
       this.banner = h('div', { role: 'alert' });
       const total = this.steps.length;
-      const progress = step < 0 ? 0 : Math.round(((step + 1) / total) * 100);
+      const progress = Math.round(((step + 1) / total) * 100);
       const head = h('div', { class: 'form-top' },
-        h('span', {}, step < 0 ? 'Selamat datang' : this.steps[step].kicker),
-        h('span', {}, step < 0 ? 'Mudah & berperingkat' : `${step + 1} daripada ${total}`));
+        h('span', {}, this.steps[step].kicker),
+        h('span', {}, `${step + 1} daripada ${total}`));
       const bar = h('div', { class: 'progress', role: 'progressbar', 'aria-label': 'Kemajuan borang', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(progress) },
         h('span', { style: `width:${progress}%` }));
-      const notice = this.state.restored && step >= 0
+      const notice = this.state.restored && (step > 0 || Object.keys(this.state.fields).length)
         ? h('div', { class: 'notice', role: 'status' }, 'Draf dalam tab ini dipulihkan. Pilih semula gambar jika ada.')
         : null;
       this.state.restored = false;
 
-      let body;
-      if (step < 0) {
-        body = this.welcome();
-      } else {
-        const s = this.steps[step];
-        body = h('div', { class: 'question' },
-          h('p', { class: 'eyebrow red' }, this.editing ? 'KEMAS KINI JAWAPAN' : `LANGKAH ${String(step + 1).padStart(2, '0')}`),
-          h('h1', { tabindex: '-1' }, s.q),
-          h('p', { class: 'lead' }, s.lead),
-          s.body());
-      }
+      const s = this.steps[step];
+      const body = h('div', { class: 'question' },
+        h('p', { class: 'eyebrow red' }, `LANGKAH ${String(step + 1).padStart(2, '0')}`),
+        h('h1', { tabindex: '-1' }, s.q),
+        h('p', { class: 'lead' }, s.lead),
+        s.body());
       this.main.replaceChildren(...[head, bar, notice, this.banner, body].filter(Boolean),
         h('input', { class: 'hp', type: 'text', name: 'website', tabindex: '-1', autocomplete: 'off', 'aria-hidden': 'true', value: this.hp || '', oninput: (e) => { this.hp = e.target.value; } }));
       this.renderFoot();
@@ -241,11 +230,11 @@
     renderFoot(busyText) {
       const step = this.state.step;
       const last = step === this.steps.length - 1;
-      let label = step < 0 ? 'Buat aduan' : last ? 'Hantar aduan' : this.editing ? 'Simpan perubahan' : 'Seterusnya';
+      const label = last ? 'Hantar aduan' : 'Seterusnya';
       this.nextBtn = h('button', { class: 'primary', type: 'button', disabled: !!busyText, onclick: () => this.next() }, busyText || label, busyText ? null : icon('arrow'));
       this.foot.replaceChildren(
         h('div', { class: 'actions' },
-          step >= 0 ? h('button', { class: 'back', type: 'button', disabled: !!busyText, onclick: () => this.back() }, icon('back'), h('span', {}, 'Kembali')) : h('span'),
+          step > 0 ? h('button', { class: 'back', type: 'button', disabled: !!busyText, onclick: () => this.back() }, icon('back'), h('span', {}, 'Kembali')) : h('span'),
           this.nextBtn),
         h('p', { class: 'privacy' }, icon('lock', 12), ' Privasi anda diutamakan. Maklumat peribadi digunakan untuk pengurusan aduan sahaja.'));
     }
@@ -258,142 +247,60 @@
     }
 
     back() {
-      if (this.editing) { this.editing = false; return this.go(this.steps.length - 1); }
       this.go(this.state.step - 1);
     }
 
     async next() {
       const step = this.state.step;
-      if (step < 0) return this.go(0);
-      const s = this.steps[step];
-      const ok = await s.check();
+      const ok = await this.steps[step].check();
       if (!ok) return;
       if (step === this.steps.length - 1) return this.submit();
-      if (this.editing) { this.editing = false; return this.go(this.steps.length - 1); }
       this.go(step + 1);
     }
 
     // ---- steps ----
 
-    welcome() {
-      return h('div', { class: 'question welcome' },
-        h('p', { class: 'eyebrow red' }, 'MYADUAN PARLIMEN GOMBAK'),
-        h('h1', { tabindex: '-1' }, 'Ada masalah', h('br'), 'di kawasan anda?'),
-        h('p', { class: 'lead' }, 'Kongsikan dengan kami. Kami rekod dan salurkan aduan anda kepada pegawai yang berkaitan.'),
-        h('div', { class: 'points' },
-          h('span', {}, icon('clip'), 'Satu soalan setiap langkah'),
-          h('span', {}, icon('camera'), 'Boleh sertakan gambar'),
-          h('span', {}, icon('search'), 'Dapat nombor rujukan untuk semak status')),
-        this.dataset.privacy ? h('a', { class: 'privacy-link', href: this.dataset.privacy, target: '_blank', rel: 'noopener' }, 'Baca notis privasi') : null);
-    }
-
-    choices(name, items) {
-      const err = h('div', { class: 'err', 'aria-live': 'polite' });
-      const group = h('div', { class: 'choices', role: 'radiogroup', 'aria-label': 'Pilihan' },
-        items.map((it) => {
-          const on = this.state.fields[name] === it.value;
-          return h('button', {
-            type: 'button', role: 'radio', 'aria-checked': on ? 'true' : 'false', class: 'choice' + (on ? ' selected' : ''),
-            onclick: () => { this.state.fields[name] = it.value; this.saveDraft(); this.show(); },
-          }, h('span', { class: 'choice-icon' }, icon(it.icon, 23)), h('span', { class: 'choice-copy' }, h('strong', {}, it.label), h('small', {}, it.desc)), h('span', { class: 'radio' }));
-        }));
-      const wrap = h('div', { class: 'field' }, group, err);
-      this.errs[name] = { wrap, err };
-      return wrap;
-    }
-
-    stepEmergency() {
-      const yes = this.state.fields.emergency === 'Ya';
-      return h('div', {},
-        this.choices('emergency', [
-          { value: 'Tidak', label: 'Tidak, teruskan aduan', desc: 'Masalah yang memerlukan semakan dan tindakan', icon: 'clip' },
-          { value: 'Ya', label: 'Ya, kecemasan sedang berlaku', desc: 'Nyawa terancam, kebakaran atau jenayah', icon: 'alert' },
-        ]),
-        yes ? h('div', { class: 'emergency' },
-          h('strong', {}, 'Hubungi 999 dengan segera.'),
-          h('p', {}, this.dataset.emergency || 'Jangan tunggu tindakan melalui borang ini.'),
-          h('a', { class: 'call', href: 'tel:999' }, icon('phone'), ' Hubungi 999'),
-          this.field('ack', '', null, h('label', { class: 'consent' },
-            this.box('ack'), h('span', {}, 'Saya sudah mengambil tindakan kecemasan dan ingin merekodkan aduan.')))) : null);
-    }
-
-    checkEmergency() {
-      const f = this.state.fields;
-      if (!f.emergency) return this.fail({ emergency: 'Sila pilih satu jawapan.' });
-      if (f.emergency === 'Ya' && !f.ack) return this.fail({ ack: 'Sila tandakan pengesahan ini untuk meneruskan.' });
-      return true;
-    }
-
-    stepDetails() {
-      this.counter = h('div', { class: 'counter' }, `${(this.state.fields.details || '').trim().length} / 5000`);
-      return this.field('details', 'Butiran aduan', null, h('div', {},
-        this.input('details', { multiline: true, maxlength: 5000, placeholder: 'Contoh: Tiga lampu jalan di hadapan taman tidak menyala sejak Isnin. Kawasan menjadi gelap pada waktu malam.' }),
-        this.counter));
-    }
-
-    stepLocation() {
+    stepWhere() {
       this.gpsRow = h('div', { class: 'row' });
-      const wrap = this.field('location', 'Alamat / mercu tanda', null, h('div', {},
-        this.input('location', { multiline: true, rows: 3, maxlength: 500, placeholder: 'Contoh: Hadapan surau, Jalan Melati 3, Taman Melati' }),
-        this.gpsRow));
-      this.renderGps();
-      return wrap;
-    }
-
-    stepImages() {
       this.thumbs = h('div', { class: 'thumbs' });
       const pick = (capture) => h('label', { class: 'secondary' }, capture ? 'Ambil gambar' : 'Pilih gambar',
         h('input', {
           type: 'file', accept: 'image/jpeg,image/png,image/webp', multiple: !capture, capture: capture ? 'environment' : null,
           onchange: (e) => { this.addFiles(Array.from(e.target.files)); e.target.value = ''; },
         }));
-      const wrap = this.field('images', '', null, h('div', {},
-        h('div', { class: 'upload' }, icon('camera', 35), h('h3', {}, 'Tambah gambar masalah'),
-          h('p', {}, `Sehingga ${MAX_IMAGES} gambar · JPG, PNG, WebP`, h('br'), 'Maksimum 5 MB setiap gambar'),
-          h('div', { class: 'upload-actions' }, pick(false), pick(true))),
-        this.thumbs,
-        h('p', { class: 'hint' }, 'Gambar dihantar bersama aduan dan hanya boleh dilihat oleh pegawai yang diberi kebenaran.')));
+      this.counter = h('div', { class: 'counter' }, `${(this.state.fields.details || '').trim().length} / 5000`);
+      const wrap = h('div', {},
+        h('p', { class: 'urgent' }, icon('alert', 18), h('span', {}, 'Kecemasan seperti kebakaran atau jenayah? ', h('a', { href: 'tel:999' }, 'Hubungi 999'), ' dahulu.')),
+        this.field('location', 'Lokasi', null, h('div', {},
+          this.input('location', { multiline: true, rows: 2, maxlength: 500, placeholder: 'Contoh: Hadapan surau, Jalan Melati 3, Taman Melati' }),
+          this.gpsRow)),
+        this.field('images', 'Gambar', `(sehingga ${MAX_IMAGES} gambar, maksimum 5 MB setiap satu)`, h('div', {},
+          h('div', { class: 'upload' }, icon('camera', 35), h('h3', {}, 'Tambah gambar masalah'),
+            h('div', { class: 'upload-actions' }, pick(false), pick(true))),
+          this.thumbs)),
+        this.field('details', 'Apa masalahnya?', '(pilihan jika ada gambar)', h('div', {},
+          this.input('details', { multiline: true, rows: 3, maxlength: 5000, placeholder: 'Contoh: Lampu jalan tidak menyala sejak Isnin.' }),
+          this.counter)));
+      this.renderGps();
       this.renderThumbs();
       return wrap;
     }
 
-    async pendingCheck() {
+    async checkWhere() {
       if (this.pending) {
         this.renderFoot('Memproses gambar…');
         await this.pending;
         this.renderFoot();
       }
-      return true;
+      return this.checkFields(['location', 'details']);
     }
 
-    stepName() {
-      return this.field('name', 'Nama penuh', null, this.input('name', { type: 'text', autocomplete: 'name', maxlength: 150, placeholder: 'Masukkan nama penuh' }));
-    }
-
-    stepContact() {
+    stepWho() {
       return h('div', {},
-        this.field('ic', 'No. kad pengenalan', '(wajib, untuk semak status)', this.input('ic', { type: 'text', inputmode: 'numeric', autocomplete: 'off', placeholder: '900101-14-5678', maxlength: 14 })),
-        this.field('phone', 'No. telefon bimbit', null, this.input('phone', { type: 'tel', autocomplete: 'tel', placeholder: '012-345 6789', maxlength: 20 })),
-        this.field('email', 'E-mel', '(pilihan, untuk terima nombor rujukan)', this.input('email', { type: 'email', autocomplete: 'email', inputmode: 'email', placeholder: 'nama@contoh.com', maxlength: 190 })));
-    }
-
-    stepReview() {
-      const f = this.state.fields;
-      const c = this.state.coords;
-      const rows = [
-        ['Kecemasan', f.emergency === 'Ya' ? 'Ya (tindakan kecemasan telah diambil)' : 'Tidak', 0],
-        ['Butiran', f.details, 1],
-        ['Lokasi', [f.location, c ? `GPS ${c.lat}, ${c.lng}` : ''].filter(Boolean).join(' · '), 2],
-        ['Gambar', this.files.length ? `${this.files.length} gambar dipilih` : 'Tiada gambar', 3],
-        ['Nama', f.name, 4],
-        ['No. kad pengenalan', f.ic, 5],
-        ['No. telefon', f.phone, 5],
-        ['E-mel', f.email || 'Tiada', 5],
-      ];
-      return h('div', {},
-        h('div', { class: 'review' }, rows.map(([label, value, step]) => h('div', { class: 'review-row' },
-          h('div', {}, h('small', {}, label), h('p', {}, value || '-')),
-          h('button', { type: 'button', 'aria-label': `Ubah ${label}`, onclick: () => { this.editing = true; this.go(step); } }, 'Ubah')))),
+        this.field('name', 'Nama', '(nama ringkas pun boleh)', this.input('name', { type: 'text', autocomplete: 'name', maxlength: 150, placeholder: 'Contoh: Kak Siti' })),
+        this.field('ic', 'No. kad pengenalan', null, this.input('ic', { type: 'text', inputmode: 'numeric', autocomplete: 'off', placeholder: '900101-14-5678', maxlength: 14 })),
+        this.field('phone', 'No. telefon', null, this.input('phone', { type: 'tel', autocomplete: 'tel', placeholder: '012-345 6789', maxlength: 20 })),
+        this.field('email', 'E-mel', '(pilihan, untuk terima nombor rujukan)', this.input('email', { type: 'email', autocomplete: 'email', inputmode: 'email', placeholder: 'nama@contoh.com', maxlength: 190 })),
         this.field('consent', '', null, h('label', { class: 'consent' }, this.box('consent'),
           h('span', {}, 'Saya mengesahkan maklumat ini benar dan bersetuju maklumat peribadi saya digunakan untuk mengurus aduan ini.',
             this.dataset.privacy ? [' ', h('a', { href: this.dataset.privacy, target: '_blank', rel: 'noopener' }, 'Notis privasi')] : null))));
@@ -420,7 +327,7 @@
         this.state.fields[name] = el.value;
         this.saveDraft();
         this.setError(name, '');
-        if (name === 'details') this.counter.textContent = `${el.value.trim().length} / 5000`;
+        if (name === 'details' && this.counter) this.counter.textContent = `${el.value.trim().length} / 5000`;
       });
       el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && el.tagName === 'INPUT') { e.preventDefault(); this.next(); } });
       this.inputs[name] = el;
@@ -458,6 +365,7 @@
 
     async processFiles(list) {
       this.setError('images', '');
+      this.setError('details', '');
       for (const file of Array.from(list)) {
         if (this.files.length >= MAX_IMAGES) { this.setError('images', `Maksimum ${MAX_IMAGES} gambar.`); break; }
         if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { this.setError('images', 'Hanya JPG, PNG atau WebP.'); continue; }
@@ -469,7 +377,7 @@
     }
 
     renderThumbs() {
-      if (!this.thumbs || !this.thumbs.isConnected) return;
+      if (!this.thumbs) return;
       this.thumbs.replaceChildren(...this.files.map((f, i) => h('div', { class: 'thumb' },
         h('img', { src: f.url, alt: `Gambar ${i + 1}` }),
         h('button', { type: 'button', 'aria-label': `Buang gambar ${i + 1}`, onclick: () => { URL.revokeObjectURL(f.url); this.files.splice(i, 1); this.renderThumbs(); } }, '×'))));
@@ -489,9 +397,9 @@
     rules() {
       const f = this.state.fields;
       return {
-        details: (f.details || '').trim().length < 20 ? 'Terangkan aduan sekurang-kurangnya 20 aksara.' : '',
-        location: (f.location || '').trim().length < 5 ? 'Lokasi kejadian diperlukan.' : '',
-        name: (f.name || '').trim().length < 3 ? 'Nama penuh diperlukan.' : '',
+        location: (f.location || '').trim().length < 5 ? 'Tulis lokasi masalah.' : '',
+        details: !(f.details || '').trim() && !this.files.length ? 'Sertakan gambar atau tulis ringkas apa masalahnya.' : '',
+        name: (f.name || '').trim().length < 2 ? 'Tulis nama anda.' : '',
         ic: (f.ic || '').replace(/\D/g, '').length !== 12 ? 'No. IC mesti 12 digit.' : '',
         phone: (f.phone || '').replace(/\D/g, '').length < 9 ? 'No. telefon tidak sah.' : '',
         email: (f.email || '').trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim()) ? 'Alamat e-mel tidak sah. Kosongkan jika tiada.' : '',
@@ -515,7 +423,7 @@
 
     /** Step that holds a field, so a server error can send the user back to it. */
     stepOf(field) {
-      return { details: 1, location: 2, images: 3, name: 4, ic: 5, phone: 5, email: 5 }[field] ?? this.steps.length - 1;
+      return ['location', 'images', 'details'].includes(field) ? 0 : this.steps.length - 1;
     }
 
     async submit() {
@@ -548,7 +456,7 @@
         if (status === 422 && data && data.data && data.data.fields) {
           const fields = data.data.fields;
           const first = Object.keys(fields)[0];
-          if (this.stepOf(first) !== this.state.step) { this.editing = true; this.go(this.stepOf(first)); }
+          if (this.stepOf(first) !== this.state.step) this.go(this.stepOf(first));
           this.fail(fields);
           this.showBanner(data.message);
         } else {
@@ -578,7 +486,7 @@
           h('div', { class: 'row center' }, copy,
             this.dataset.track ? h('a', { class: 'secondary', href: this.dataset.track }, 'Semak Status Aduan') : null)));
       this.foot.replaceChildren(h('div', { class: 'actions' }, h('span'),
-        h('button', { class: 'primary', type: 'button', onclick: () => { this.editing = false; this.show(); this.top(); } }, 'Buat aduan baharu', icon('arrow'))));
+        h('button', { class: 'primary', type: 'button', onclick: () => { this.show(); this.top(); } }, 'Buat aduan baharu', icon('arrow'))));
       this.top();
     }
   }

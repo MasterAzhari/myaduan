@@ -31,7 +31,8 @@ Status: **Fasa 3**. Ada database, peranan, aliran status, REST API, borang awam,
 
 ### Borang awam
 
-- Gaya langkah demi langkah (ikut borang asal MyAduan): soalan kecemasan → butiran → lokasi (+GPS) → gambar → nama → IC & telefon → semakan dengan butang Ubah. Panel tepi tunjuk peringkat, ada bar kemajuan.
+- Dua page sahaja (sejak 0.9.0): **page 1** lokasi (+GPS), gambar dan keterangan ringkas (pilihan kalau ada gambar), dengan pautan 999 untuk kecemasan; **page 2** nama (nama ringkas pun boleh), IC, telefon, e-mel (pilihan) dan pengesahan. Panel tepi tunjuk peringkat, ada bar kemajuan.
+- Pengadu tak isi DUN atau taman/kampung. Super Admin pilih dalam portal (Kelaskan / tugaskan), termasuk untuk kes yang dah ditutup. Selagi ada kes tanpa DUN atau taman, senarai kes tunjuk peringatan kuning dengan butang **Lengkapkan sekarang** (tapisan DUN → *Tiada DUN atau taman*), dan halaman kes tu sendiri pun ada peringatan.
 - 5 medan wajib: nama, No. IC, telefon, butiran, lokasi. Gambar (maks 3) dan GPS pilihan.
 - Borang dan semak status guna bingkai yang sama, dengan suis Buat Aduan / Semak Status Aduan. Bingkai melebar keluar dari kolum tema yang sempit (maks 1120px).
 - Borang berjalan dalam Shadow DOM, jadi CSS tema/Elementor tak rosakkan rupa dia.

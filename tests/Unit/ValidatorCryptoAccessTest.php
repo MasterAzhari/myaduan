@@ -41,7 +41,17 @@ final class ValidatorCryptoAccessTest extends TestCase
     public function test_complaint_errors_per_field(): void
     {
         $r = Validator::complaint(['consent' => 'true']);
-        $this->assertSame(['name', 'ic', 'phone', 'details', 'location', 'consent'], array_keys($r['errors']));
+        // Details may be left out (photos can say it); the controller checks that one of the two is there.
+        $this->assertSame(['name', 'ic', 'phone', 'location', 'consent'], array_keys($r['errors']));
+        $r = Validator::complaint(['details' => 'abc']);
+        $this->assertArrayHasKey('details', $r['errors'], 'a few letters are not a description');
+    }
+
+    public function test_short_name_is_enough(): void
+    {
+        $r = Validator::complaint(['name' => 'Ah', 'ic' => '900101145678', 'phone' => '0123456789', 'location' => 'Jalan 2, Taman Sri Gombak', 'consent' => true]);
+        $this->assertSame([], $r['errors']);
+        $this->assertSame('', $r['data']['details']);
     }
 
     public function test_provisional_title(): void
@@ -51,6 +61,7 @@ final class ValidatorCryptoAccessTest extends TestCase
         $title = Validator::provisional_title($long);
         $this->assertLessThanOrEqual(81, mb_strlen($title));
         $this->assertStringEndsWith('…', $title);
+        $this->assertSame('Aduan di Jalan 2, Taman Sri Gombak', Validator::provisional_title('', 80, ' Jalan 2,  Taman Sri Gombak'));
     }
 
     public function test_crypto_roundtrip_and_blind_index(): void

@@ -68,4 +68,27 @@ final class AreasTest extends TestCase
         $this->assertSame([200, 'Taman Melati Jaya'], [$s, $u['name']]);
         $this->assertSame(404, $this->call('POST', '/admin/areas/999999', ['name' => 'X Y'], 'super')[0]);
     }
+
+    /** v0.9.0: the public form no longer asks for DUN or taman, so the portal keeps reminding the Super Admin. */
+    public function test_cases_without_dun_or_taman_are_counted_and_listed(): void
+    {
+        global $wpdb;
+        [, $r] = $this->call('POST', '/admin/areas', ['dun_slug' => 'sungai-tua', 'names' => 'Taman Melati'], 'super');
+        $done = $this->case_id($this->submit()['reference']);
+        $half = $this->case_id($this->submit()['reference']);
+        $closed = $this->case_id($this->submit()['reference']);
+        $this->assertSame(200, $this->op('super', $done, 'classify', ['dun_slug' => 'sungai-tua', 'area_id' => $r['ids'][0]])[0]);
+        $this->assertSame(200, $this->op('super', $half, 'classify', ['dun_slug' => 'sungai-tua'])[0]);
+
+        [, $stats] = $this->call('GET', '/admin/stats', [], 'super');
+        $this->assertSame(2, $stats['no_area'], 'a DUN without a taman still needs finishing');
+        [, $list] = $this->call('GET', '/admin/cases', ['dun' => 'incomplete'], 'super');
+        $this->assertEqualsCanonicalizing([$half, $closed], array_column($list['items'], 'id'));
+
+        // A closed case can still get its DUN and taman, without reopening it.
+        $wpdb->update(Schema::table('cases'), ['status' => 'DITUTUP', 'owner_id' => 1], ['id' => $closed]);
+        [$s, $c] = $this->op('super', $closed, 'classify', ['dun_slug' => 'sungai-tua', 'area_id' => $r['ids'][0]]);
+        $this->assertSame([200, 'DITUTUP'], [$s, $c['status']], wp_json_encode($c));
+        $this->assertSame(1, $this->call('GET', '/admin/stats', [], 'super')[1]['no_area']);
+    }
 }

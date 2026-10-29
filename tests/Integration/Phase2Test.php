@@ -86,6 +86,19 @@ final class Phase2Test extends TestCase
         $this->assertCount(2, $detail['attachments']);
     }
 
+    /** v0.9.0: page 1 is location and photos; a written description is optional when a photo says it. */
+    public function test_photo_alone_is_enough_but_not_nothing(): void
+    {
+        [$status, $data] = $this->submit_with_files([$this->jpeg(10, 10)], ['details' => '', 'name' => 'Ah']);
+        $this->assertSame(201, $status, wp_json_encode($data));
+        [, $c] = $this->call('GET', '/admin/cases/' . $this->case_id($data['reference']), [], 'super');
+        $this->assertSame('Aduan di Jalan Sungai Tua, depan SK Sungai Tua', $c['title']);
+
+        [$status, $data] = $this->call('POST', '/complaints', $this->complaint(['details' => '']));
+        $this->assertSame(422, $status);
+        $this->assertSame(['details'], array_keys($data['data']['fields']));
+    }
+
     public function test_too_many_or_bad_images_rejected_before_saving(): void
     {
         global $wpdb;

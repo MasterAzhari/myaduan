@@ -58,6 +58,9 @@ final class PublicController extends Controller
             } catch (WorkflowException $e) {
                 $errors['images'] = $e->getMessage();
             }
+            if ($check['data']['details'] === '' && !$uploads && !isset($errors['images'])) {
+                $errors['details'] = 'Sertakan gambar atau tulis ringkas apa masalahnya.';
+            }
             if ($errors) {
                 throw new FieldErrors($errors);
             }
