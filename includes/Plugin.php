@@ -26,6 +26,7 @@ final class Plugin
         add_filter('wp_authenticate_user', [Users::class, 'block_inactive']);
         add_filter('allow_password_reset', [Users::class, 'no_email_reset'], 10, 2);
         add_action('user_profile_update_errors', [Users::class, 'profile_errors'], 10, 3);
+        add_action('set_user_role', [Users::class, 'role_changed'], 10, 3);
         add_filter('rest_post_dispatch', [self::class, 'no_cache'], 10, 3);
     }
 
