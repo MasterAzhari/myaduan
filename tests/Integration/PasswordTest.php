@@ -77,6 +77,29 @@ final class PasswordTest extends TestCase
         $this->assertArrayHasKey('password', $data['data']['fields']);
     }
 
+    public function test_a_new_role_signs_the_user_out(): void
+    {
+        $id = $this->staff('naik.pangkat', 'myaduan_officer', 'LamaPass11');
+        $sessions = WP_Session_Tokens::get_instance($id);
+        $sessions->create(time() + 3600);
+
+        // Only the name changes: still signed in.
+        [$status] = $this->call('POST', '/admin/users/' . $id, ['name' => 'Naik Pangkat'], 'super');
+        $this->assertSame(200, $status);
+        $this->assertCount(1, $sessions->get_all());
+
+        [$status, $u] = $this->call('POST', '/admin/users/' . $id, ['role' => 'superadmin'], 'super');
+        $this->assertSame(200, $status, wp_json_encode($u));
+        $this->assertSame('superadmin', $u['role']);
+        $this->assertCount(0, $sessions->get_all(), 'signed out after a role change in the portal');
+
+        // The same from wp-admin (Users → Change role).
+        $sessions->create(time() + 3600);
+        wp_set_current_user(self::$users['super']);
+        (new WP_User($id))->set_role('myaduan_viewer');
+        $this->assertCount(0, $sessions->get_all(), 'signed out after a role change in wp-admin');
+    }
+
     public function test_everyone_changes_their_own_password(): void
     {
         foreach (['myaduan_superadmin' => 'sendiri.sa', 'myaduan_officer' => 'sendiri.admin', 'myaduan_viewer' => 'sendiri.pemerhati'] as $role => $login) {

@@ -18,6 +18,7 @@ if (!defined('ABSPATH')) {
  *
  * The Super Admin sets each account's first password and resets forgotten ones.
  * Everyone changes their own password in the portal; e-mailed reset links are off.
+ * Changing someone's role signs them out, so they log in again with the new access.
  */
 final class Users
 {
@@ -140,6 +141,10 @@ final class Users
         if ($active) {
             $user->add_role(self::ROLES[$role]);
             delete_user_meta($id, self::INACTIVE_META);
+            if ($role !== $current['role'] && $current['role'] !== 'none') {
+                // A new role signs them out everywhere, so their next login has the new access.
+                \WP_Session_Tokens::get_instance($id)->destroy_all();
+            }
         } else {
             update_user_meta($id, self::INACTIVE_META, self::ROLES[$role]);
             \WP_Session_Tokens::get_instance($id)->destroy_all();
@@ -194,6 +199,17 @@ final class Users
             || get_user_meta($u->ID, self::INACTIVE_META, true) !== ''
             || Settings::is_staff_email($u->user_email)
         );
+    }
+
+    /**
+     * set_user_role: a role changed in wp-admin (Users) also signs the account out everywhere,
+     * so the new access applies from their next login. Not for new accounts or one's own.
+     */
+    public static function role_changed(int $user_id, string $role, array $old_roles): void
+    {
+        if ($old_roles && $old_roles !== [$role] && $user_id !== get_current_user_id()) {
+            \WP_Session_Tokens::get_instance($user_id)->destroy_all();
+        }
     }
 
     /** allow_password_reset: no e-mailed reset links for MyAduan accounts; the Super Admin sets a new password. */
