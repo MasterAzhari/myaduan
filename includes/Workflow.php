@@ -83,7 +83,8 @@ final class Workflow
                 ? 'Tugaskan kes ini kepada pegawai atau diri sendiri dahulu sebelum diproses.'
                 : 'Hanya pegawai yang ditugaskan boleh memproses kes ini.');
         }
-        if ($status === self::CLOSED && !in_array($op, ['reopen', 'comment', 'assign'], true)) {
+        // Classify stays open on a closed case so the Super Admin can still fill in DUN and taman for the dashboard.
+        if ($status === self::CLOSED && !in_array($op, ['reopen', 'comment', 'assign', 'classify'], true)) {
             throw new WorkflowException('Kes telah ditutup. Buka semula dahulu.');
         }
 

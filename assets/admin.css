@@ -128,6 +128,9 @@ tr.inactive td { color: var(--muted); }
 .main-col { width: 34%; }
 .cats { max-width: 320px; font-size: .88rem; }
 .warn-text { color: var(--warn); }
+.reminder { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; background: #fff8e6; border: 1px solid #f0d58a; border-left: 4px solid var(--gold); border-radius: var(--radius); padding: 12px 14px; margin: 0 0 16px; }
+.reminder p { margin: 0; flex: 1 1 240px; }
+.reminder strong { color: #8a5a00; }
 .bad-text { color: var(--bad); font-weight: 600; }
 .empty { text-align: center; color: var(--muted); padding: 32px; }
 .pager { display: flex; align-items: center; gap: 8px; justify-content: flex-end; color: var(--muted); font-size: .9rem; }

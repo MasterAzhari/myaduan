@@ -43,7 +43,7 @@ final class Cases
                     'version' => 1,
                     'status' => Workflow::RECEIVED,
                     'priority' => 'BIASA',
-                    'title' => Validator::provisional_title($data['details']),
+                    'title' => Validator::provisional_title($data['details'], 80, $data['location']),
                     'details' => $data['details'],
                     'location_text' => $data['location'],
                     'lat' => $data['lat'],
@@ -174,7 +174,12 @@ final class Cases
             $where[] = $f['category'] === 'none' ? 'c.category_code IS NULL' : $this->db->prepare('c.category_code = %s', $f['category']);
         }
         if (!empty($f['dun'])) {
-            $where[] = $f['dun'] === 'none' ? 'c.dun_slug IS NULL' : $this->db->prepare('c.dun_slug = %s', $f['dun']);
+            $where[] = match ($f['dun']) {
+                'none' => 'c.dun_slug IS NULL',
+                // The Super Admin's to-do list: cases the dashboard cannot place yet.
+                'incomplete' => '(c.dun_slug IS NULL OR c.area_id IS NULL)',
+                default => $this->db->prepare('c.dun_slug = %s', $f['dun']),
+            };
         }
         if (!empty($f['flag'])) {
             $open = "c.status <> 'DITUTUP'";
@@ -527,6 +532,8 @@ final class Cases
             'by_status' => $counts,
             'unclassified' => (int) $this->db->get_var("SELECT COUNT(*) FROM $table c WHERE $scope AND $open AND c.category_code IS NULL"),
             'unassigned' => (int) $this->db->get_var("SELECT COUNT(*) FROM $table c WHERE $scope AND $open AND c.owner_id = 0"),
+            // Closed cases count too: the dashboard groups every case by DUN and taman/kampung.
+            'no_area' => (int) $this->db->get_var("SELECT COUNT(*) FROM $table c WHERE $scope AND (c.dun_slug IS NULL OR c.area_id IS NULL)"),
             'not_accepted' => (int) $this->db->get_var("SELECT COUNT(*) FROM $table c WHERE $scope AND $open AND c.owner_id > 0 AND c.accepted_at IS NULL"),
             'mine_open' => (int) $this->db->get_var($this->db->prepare("SELECT COUNT(*) FROM $table c WHERE $open AND c.owner_id = %d", $actor['id'])),
             'overdue' => (int) $this->db->get_var($this->db->prepare("SELECT COUNT(*) FROM $table c WHERE $scope AND $open AND c.followup_at IS NOT NULL AND c.followup_at < %s", $now)),

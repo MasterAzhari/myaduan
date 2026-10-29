@@ -259,7 +259,7 @@ final class Mailer
             $case['lat'] !== null ? 'Peta: https://www.google.com/maps?q=' . rawurlencode($case['lat'] . ',' . $case['lng']) : null,
             '',
             'Aduan:',
-            $case['details'],
+            $case['details'] !== '' ? $case['details'] : '(Tiada keterangan bertulis. Sila rujuk gambar yang dilampirkan.)',
             '',
             $photos ? 'Gambar aduan dilampirkan (' . count($photos) . ').' : null,
             '',

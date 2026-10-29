@@ -313,6 +313,7 @@
     if (me.can.manage) {
       card('Belum dikelaskan', stats.unclassified, { category: 'none', flag: 'open' }, stats.unclassified ? 'warn' : '');
       card('Belum ditugaskan', stats.unassigned, { owner: 'unassigned', flag: 'open' }, stats.unassigned ? 'warn' : '');
+      card('Tiada DUN / taman', stats.no_area, { dun: 'incomplete' }, stats.no_area ? 'warn' : '');
       card('Menunggu pengesahan tutup', stats.by_status['MENUNGGU PENGESAHAN'], { status: 'MENUNGGU PENGESAHAN' }, stats.by_status['MENUNGGU PENGESAHAN'] ? 'warn' : '');
     } else {
       card('Kes saya (terbuka)', stats.mine_open, { owner: String(me.id), flag: 'open' });
@@ -340,7 +341,7 @@
       field('Status', select('status', [{ value: '', label: 'Semua status' }, ...state.catalog.statuses.map((s) => ({ value: s, label: s }))], query.status)),
       field('Keadaan', select('flag', [{ value: '', label: 'Semua' }, ...Object.entries(FLAGS).map(([value, label]) => ({ value, label }))], query.flag)),
       field('Kategori', select('category', categoryOptions([{ value: '', label: 'Semua kategori' }, ...(seesNew ? [{ value: 'none', label: 'Belum dikelaskan' }] : [])]), query.category)),
-      field('DUN', select('dun', dunOptions([{ value: '', label: 'Semua DUN' }, { value: 'none', label: 'Belum ditetapkan' }]), query.dun)),
+      field('DUN', select('dun', dunOptions([{ value: '', label: 'Semua DUN' }, { value: 'none', label: 'Belum ditetapkan' }, { value: 'incomplete', label: 'Tiada DUN atau taman' }]), query.dun)),
       field('Pegawai', select('owner', ownerOpts, query.owner)),
       field('Dari', h('input', { name: 'from', type: 'date', value: query.from || '' })),
       field('Hingga', h('input', { name: 'to', type: 'date', value: query.to || '' }))),
@@ -355,7 +356,8 @@
     const rows = list.items.map((c) => h('tr', { class: 'row', onclick: (e) => { if (!e.target.closest('a')) location.hash = '#/kes/' + c.id; } },
       h('td', { 'data-label': 'Rujukan' }, h('a', { class: 'ref', href: '#/kes/' + c.id }, c.reference), h('small', {}, formatDate(c.created_at))),
       h('td', { 'data-label': 'Aduan', class: 'main-col' }, h('span', { class: 'title' }, c.title), h('small', {}, c.location)),
-      h('td', { 'data-label': 'Kategori' }, catName(c.category_code) || h('em', { class: 'muted' }, 'Belum dikelaskan'), h('small', {}, dunName(c.dun_slug) || '')),
+      h('td', { 'data-label': 'Kategori' }, catName(c.category_code) || h('em', { class: 'muted' }, 'Belum dikelaskan'), h('small', {}, dunName(c.dun_slug) || ''),
+        me.can.manage && (!c.dun_slug || !c.area_id) ? h('small', { class: 'warn-text' }, c.dun_slug ? 'Tiada taman/kampung' : 'Tiada DUN / taman') : null),
       h('td', { 'data-label': 'Status' }, statusBadge(c.status), ' ', priorityBadge(c.priority), ' ', trackBadge(c.track, c.status),
         c.owner_id && !c.accepted && c.status !== 'DITUTUP' ? h('small', { class: 'warn-text' }, 'Belum diterima') : null),
       h('td', { 'data-label': 'Pegawai' }, c.owner_name || h('em', { class: 'muted' }, 'Belum ditugaskan'),
@@ -367,8 +369,16 @@
       page > 1 ? h('a', { class: 'btn ghost', href: hashFor('/kes', Object.assign({}, query, { page: page - 1 })) }, '‹ Sebelum') : null,
       page < pages ? h('a', { class: 'btn ghost', href: hashFor('/kes', Object.assign({}, query, { page: page + 1 })) }, 'Seterusnya ›') : null);
 
+    // Shown on every visit until done: the dashboard groups cases by DUN and taman, which the public form no longer asks for.
+    const areaReminder = me.can.manage && stats.no_area && query.dun !== 'incomplete'
+      ? h('div', { class: 'reminder', role: 'status' },
+        h('p', {}, h('strong', {}, `${stats.no_area} aduan belum ada DUN atau taman/kampung.`), ' Lengkapkan supaya dashboard nanti tepat.'),
+        h('a', { class: 'btn', href: hashFor('/kes', { dun: 'incomplete' }) }, 'Lengkapkan sekarang'))
+      : null;
+
     view.replaceChildren(
       h('h1', {}, 'Senarai kes'),
+      areaReminder,
       h('section', { class: 'stats', 'aria-label': 'Ringkasan' }, cards),
       f,
       list.items.length
@@ -409,7 +419,7 @@
     const main = h('div', { class: 'col-main' },
       h('section', { class: 'card' },
         h('h2', {}, 'Butiran aduan'),
-        h('p', { class: 'details' }, c.details),
+        c.details ? h('p', { class: 'details' }, c.details) : h('p', { class: 'muted' }, 'Pengadu tidak menulis keterangan. Rujuk gambar dan lokasi.'),
         dl([['Lokasi', h('span', {}, c.location, map ? ' · ' : '', map)], ['Diterima', formatDate(c.created_at)]]),
         photos.length ? h('div', { class: 'photos' }, photos.map((a) => h('a', { href: fileUrl(a.id), target: '_blank', rel: 'noopener', title: a.name },
           h('img', { src: fileUrl(a.id), alt: 'Gambar aduan: ' + a.name, loading: 'lazy' }),
@@ -460,6 +470,9 @@
       h('div', { class: 'case-head' },
         h('div', {}, h('code', { class: 'ref' }, c.reference), h('h1', {}, c.title)),
         h('div', { class: 'badges' }, statusBadge(c.status), priorityBadge(c.priority), trackBadge(c.track, c.status))),
+      state.me.can.manage && (!c.dun_slug || !c.area_id) ? h('div', { class: 'reminder', role: 'status' },
+        h('p', {}, h('strong', {}, c.dun_slug ? 'Taman/kampung belum dipilih.' : 'DUN dan taman/kampung belum dipilih.'),
+          ' Pilih di ', h('em', {}, 'Kelaskan / tugaskan'), ' supaya kes ini dikira dalam dashboard.')) : null,
       h('div', { class: 'case-grid' }, main, side));
   }
 

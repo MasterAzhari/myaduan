@@ -59,6 +59,13 @@ final class WorkflowTest extends TestCase
         $this->assertSame(1, $r['set']['reopen_count']);
     }
 
+    public function test_closed_case_can_still_get_dun_and_taman(): void
+    {
+        $r = Workflow::apply($this->case(['status' => Workflow::CLOSED, 'owner_id' => 7]), 'classify', self::MANAGER, ['dun_slug' => 'sungai-tua', 'area_id' => 3], self::NOW);
+        $this->assertSame(Workflow::CLOSED, $r['status'], 'filling in the area does not reopen the case');
+        $this->assertSame(['dun_slug' => 'sungai-tua', 'area_id' => 3], $r['set']);
+    }
+
     public function test_officer_cannot_assign(): void
     {
         $this->expectRule('Super Admin');

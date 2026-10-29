@@ -1,11 +1,11 @@
 <?php
 namespace MyAduan;
 
-/** Pure input validation for the public five-field form. */
+/** Pure input validation for the public two-page form. */
 final class Validator
 {
     public const NAME_MAX = 150;
-    public const DETAILS_MIN = 20;
+    public const DETAILS_MIN = 5;
     public const DETAILS_MAX = 5000;
     public const LOCATION_MAX = 500;
 
@@ -52,8 +52,9 @@ final class Validator
         $text = static fn(string $k): string => trim(preg_replace('/\s+/u', ' ', (string) ($in[$k] ?? '')));
 
         $name = $text('name');
-        if (mb_strlen($name) < 3 || mb_strlen($name) > self::NAME_MAX) {
-            $errors['name'] = 'Nama penuh diperlukan (3 hingga 150 aksara).';
+        // A short name is enough; the complainant is reached by phone.
+        if (mb_strlen($name) < 2 || mb_strlen($name) > self::NAME_MAX) {
+            $errors['name'] = 'Nama diperlukan (2 hingga 150 aksara).';
         }
 
         $ic = self::normalize_ic((string) ($in['ic'] ?? ''));
@@ -72,16 +73,17 @@ final class Validator
             $errors['email'] = 'Alamat e-mel tidak sah. Kosongkan jika tiada.';
         }
 
+        // Optional when photos come with it: the caller checks that one of the two is there.
         // Keep line breaks in the narrative; only trim the ends.
         $details = trim(str_replace("\r\n", "\n", (string) ($in['details'] ?? '')));
         $len = mb_strlen($details);
-        if ($len < self::DETAILS_MIN || $len > self::DETAILS_MAX) {
-            $errors['details'] = 'Butiran aduan perlu 20 hingga 5000 aksara.';
+        if ($len > 0 && ($len < self::DETAILS_MIN || $len > self::DETAILS_MAX)) {
+            $errors['details'] = 'Keterangan masalah perlu 5 hingga 5000 aksara.';
         }
 
         $location = $text('location');
         if (mb_strlen($location) < 5 || mb_strlen($location) > self::LOCATION_MAX) {
-            $errors['location'] = 'Lokasi kejadian diperlukan (5 hingga 500 aksara).';
+            $errors['location'] = 'Lokasi diperlukan (5 hingga 500 aksara).';
         }
 
         if (($in['consent'] ?? false) !== true) {
@@ -104,10 +106,13 @@ final class Validator
         ];
     }
 
-    /** Short provisional title from the narrative; Super Admin can correct it. */
-    public static function provisional_title(string $details, int $max = 80): string
+    /** Short provisional title from the narrative, or from the location when there is none; Super Admin can correct it. */
+    public static function provisional_title(string $details, int $max = 80, string $location = ''): string
     {
         $flat = trim(preg_replace('/\s+/u', ' ', $details));
+        if ($flat === '') {
+            $flat = 'Aduan di ' . trim(preg_replace('/\s+/u', ' ', $location));
+        }
         if (preg_match('/^(.+?[.!?])(\s|$)/u', $flat, $m) && mb_strlen($m[1]) <= $max) {
             return $m[1];
         }

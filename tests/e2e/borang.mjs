@@ -39,52 +39,44 @@ await page.reload();
 const form = page.locator('myaduan-borang');
 const next = () => form.locator('button.primary').click();
 await form.locator('h1').waitFor();
-assert((await form.locator('h1').textContent()).includes('Ada masalah'), 'halaman selamat datang dipapar');
-await page.screenshot({ path: `${SHOTS}/1-selamat-datang.png`, fullPage: true });
+assert((await form.locator('h1').textContent()).includes('Di mana'), 'terus ke page 1: lokasi & gambar');
+assert(await form.locator('.urgent a[href="tel:999"]').isVisible(), 'pautan 999 untuk kecemasan dipapar');
 
+// Page 1: location and a photo. A description is optional once a photo is there.
 await next();
-await next();
-assert(await form.locator('.err').first().textContent() !== '', 'mesti pilih jawapan kecemasan');
-await form.getByText('Ya, kecemasan sedang berlaku').click();
-assert(await form.locator('.emergency').isVisible(), 'mesej kecemasan dan 999 dipapar');
-await next();
-assert(await form.locator('#err-ack').textContent() !== '', 'mesti sahkan tindakan kecemasan');
-await form.locator('#f-ack').check();
-await page.screenshot({ path: `${SHOTS}/2-kecemasan.png`, fullPage: true });
-await next();
-
-await next();
-assert(await form.locator('#err-details').textContent() !== '', 'ralat bila butiran kosong');
-await form.locator('#f-details').fill('Lampu jalan di depan sekolah rosak sejak minggu lepas. Gelap dan bahaya waktu malam.');
-await next();
+assert(await form.locator('#err-location').textContent() !== '', 'ralat bila lokasi kosong');
+assert(await form.locator('#err-details').textContent() !== '', 'perlu gambar atau keterangan');
+await page.screenshot({ path: `${SHOTS}/1-page1-ralat.png`, fullPage: true });
 await form.locator('#f-location').fill('Jalan Sungai Tua, depan SK Sungai Tua');
-await next();
-await form.locator('input[type=file]').first().setInputFiles({ name: 'lampu.png', mimeType: 'image/png', buffer: png(1200, 900) });
-await form.locator('.thumb img').waitFor();
-await page.screenshot({ path: `${SHOTS}/3-gambar.png`, fullPage: true });
-await next();
-await form.locator('#f-name').fill('Siti binti Ahmad');
-await next();
-await form.locator('#f-ic').pressSequentially('880512105432');
-assert(await form.locator('#f-ic').inputValue() === '880512-10-5432', 'IC diformat automatik');
-await form.locator('#f-phone').fill('012-987 6543');
-await form.locator('#f-email').fill('siti@contoh.com');
-await next();
-assert((await form.locator('.review').textContent()).includes('1 gambar dipilih'), 'semakan tunjuk semua jawapan');
-
-// Reload keeps the draft and the step for this tab (photos are not kept).
-await page.reload();
-await form.locator('.review').waitFor();
-assert((await form.locator('.review').textContent()).includes('Jalan Sungai Tua'), 'draf kekal selepas muat semula');
-await form.getByRole('button', { name: 'Ubah Gambar' }).click();
 // Go on straight after picking a large photo: the form must wait for resizing, not drop the photo.
 await form.locator('input[type=file]').first().setInputFiles({ name: 'lampu.png', mimeType: 'image/png', buffer: png(4000, 3000) });
 await next();
-assert((await form.locator('.review').textContent()).includes('1 gambar dipilih'), 'kembali ke semakan selepas ubah');
+await form.locator('#f-name').waitFor();
+assert((await form.locator('h1').textContent()).includes('Siapa'), 'page 2: maklumat pengadu');
+await form.locator('button.back').click();
+await form.locator('.thumb img').waitFor();
+await page.screenshot({ path: `${SHOTS}/2-page1-gambar.png`, fullPage: true });
+assert(await form.locator('.thumb').count() === 1, 'gambar kekal bila kembali ke page 1');
+await next();
+
+// Page 2: name, IC, phone, optional e-mail, consent.
+await form.locator('#f-name').fill('Siti');
+await form.locator('#f-ic').pressSequentially('880512105432');
+assert(await form.locator('#f-ic').inputValue() === '880512-10-5432', 'IC diformat automatik');
+await form.locator('#f-phone').fill('012-987 6543');
+
+// Reload keeps the draft for this tab (photos are not kept).
+await page.reload();
+await form.locator('#f-name').waitFor();
+assert(await form.locator('#f-name').inputValue() === 'Siti', 'draf kekal selepas muat semula');
+await form.locator('button.back').click();
+await form.locator('input[type=file]').first().setInputFiles({ name: 'lampu.png', mimeType: 'image/png', buffer: png(1200, 900) });
+await form.locator('.thumb img').waitFor();
+await next();
 await next();
 assert(await form.locator('#err-consent').textContent() !== '', 'mesti tanda pengesahan');
 await form.locator('#f-consent').check();
-await page.screenshot({ path: `${SHOTS}/4-semakan.png`, fullPage: true });
+await page.screenshot({ path: `${SHOTS}/3-page2.png`, fullPage: true });
 const submitted = page.waitForResponse((r) => r.url().includes('/myaduan/v1/complaints'));
 await next();
 assert((await (await submitted).json()).images === 1, 'gambar dihantar bersama aduan');
