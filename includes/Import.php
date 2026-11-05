@@ -52,6 +52,7 @@ final class Import
         if (is_array($file) && ($file['error'] ?? 1) === UPLOAD_ERR_OK && is_uploaded_file($file['tmp_name'])) {
             $report = self::csv($file['tmp_name'], get_current_user_id());
         }
+        AuditLog::event('admin', 'IMPORT_SHEET', 'Import Google Sheet: ' . self::summary($report), null, ['ralat' => array_slice($report['errors'], 0, 20)], $report['errors'] ? AuditLog::WARNING : AuditLog::INFO);
         set_transient('myaduan_import_report_' . get_current_user_id(), $report, 600);
         wp_safe_redirect(admin_url('options-general.php?page=myaduan#import'));
         exit;

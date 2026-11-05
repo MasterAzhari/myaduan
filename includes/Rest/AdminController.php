@@ -3,6 +3,7 @@ namespace MyAduan\Rest;
 
 use MyAduan\Access;
 use MyAduan\Agencies;
+use MyAduan\AuditLog;
 use MyAduan\Mailbox;
 use MyAduan\Mailer;
 use MyAduan\Settings;
@@ -383,6 +384,8 @@ final class AdminController extends Controller
             return new \WP_Error('myaduan_' . $e->error_code(), $e->getMessage(), ['status' => $e->status()]);
         }
         if (apply_filters('myaduan_stream_files', true)) {
+            // The response ends here, before WordPress' own after-request step.
+            AuditLog::finish(200);
             nocache_headers();
             header('Content-Type: ' . $file['mime']);
             header('Content-Length: ' . filesize($file['path']));

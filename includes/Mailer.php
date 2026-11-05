@@ -366,10 +366,13 @@ final class Mailer
         global $wpdb;
         $table = Schema::table('mail_queue');
         // Rows stuck in "sending" for 15 minutes are treated as failed attempts.
-        $wpdb->query($wpdb->prepare(
+        $stuck = $wpdb->query($wpdb->prepare(
             "UPDATE $table SET state = IF(attempts >= %d, 'failed', 'pending'), last_error = 'timeout' WHERE state = 'sending' AND updated_at < %s",
             self::MAX_ATTEMPTS, gmdate('Y-m-d H:i:s', time() - 900)
         ));
+        if ($stuck) {
+            AuditLog::event('emel', 'EMEL_TERSANGKUT', "$stuck e-mel tersangkut lebih 15 minit semasa dihantar (timeout)", null, [], AuditLog::WARNING);
+        }
         $ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM $table WHERE state = 'pending' AND attempts < %d ORDER BY id LIMIT %d", self::MAX_ATTEMPTS, self::BATCH));
         $sent = 0;
         foreach ($ids as $id) {
@@ -416,6 +419,16 @@ final class Mailer
             }
             $wpdb->update($table, $done, ['id' => $id]);
             $sent += $ok ? 1 : 0;
+            // The complainant's address stays out of the log.
+            $to = str_starts_with($m['dedupe_key'], self::ACK) ? 'pengadu' : $m['recipient'];
+            AuditLog::event(
+                'emel',
+                $ok ? 'EMEL_DIHANTAR' : ($state === 'failed' ? 'EMEL_GAGAL' : 'EMEL_CUBA_SEMULA'),
+                ($ok ? 'E-mel dihantar' : ($state === 'failed' ? 'E-mel gagal (berhenti cuba)' : 'E-mel gagal, akan cuba semula')) . " kepada $to: " . mb_substr($m['subject'], 0, 150) . ($ok ? '' : ' · ' . $done['last_error']),
+                $m['case_id'] ? (int) $m['case_id'] : null,
+                ['emel_id' => (int) $id, 'cubaan' => (int) $m['attempts']],
+                $ok ? AuditLog::INFO : ($state === 'failed' ? AuditLog::ERROR : AuditLog::WARNING)
+            );
         }
         return $sent;
     }

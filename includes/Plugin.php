@@ -13,6 +13,7 @@ final class Plugin
 
     public static function boot(): void
     {
+        AuditLog::register();
         Installer::maybe_upgrade();
         add_action('rest_api_init', [self::class, 'register_routes']);
         add_action('admin_notices', [self::class, 'health_notice']);
@@ -41,6 +42,7 @@ final class Plugin
             $response->header('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
             $response->header('CDN-Cache-Control', 'no-store');
             $response->header('X-LiteSpeed-Cache-Control', 'no-cache');
+            $response->header('X-MyAduan-Trace', AuditLog::trace());
         }
         return $response;
     }

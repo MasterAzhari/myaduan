@@ -109,6 +109,7 @@ final class Mailbox
             return 0;
         }
         $client = new self();
+        $before = (string) $o['last_error'];
         $marked = 0;
         $replies = 0;
         try {
@@ -140,6 +141,12 @@ final class Mailbox
         } catch (\Throwable $e) {
             $client->close();
             $o['last_error'] = mb_substr($e->getMessage(), 0, 250);
+        }
+        // Logged when the state changes, not on every 5-minute run.
+        if ($o['last_error'] !== '' && $o['last_error'] !== $before) {
+            AuditLog::event('emel', 'MAILBOX_RALAT', 'Semakan mailbox gagal: ' . $o['last_error'], null, ['host' => $o['host']], AuditLog::WARNING);
+        } elseif ($o['last_error'] === '' && $before !== '') {
+            AuditLog::event('emel', 'MAILBOX_PULIH', 'Semakan mailbox berjaya semula');
         }
         $o['last_check'] = Cases::now();
         $o['found'] = (int) $o['found'] + $marked;
@@ -220,6 +227,7 @@ final class Mailbox
         if ($added !== 1) {
             return false;
         }
+        AuditLog::event('aduan', 'BALASAN_AGENSI', "Balasan agensi diterima untuk {$case['reference']} daripada $agency", (int) $case['id'], ['dari' => $msg['from']]);
         $owner = (int) $case['owner_id'];
         $to = $owner ? [$owner] : array_map('intval', get_users(['capability' => Access::CAP_MANAGE, 'fields' => 'ID']));
         Notifications::add($to, (int) $case['id'], 'BALASAN_AGENSI', 'Balasan agensi untuk kes ' . $case['reference'], $agency . ': ' . mb_substr(preg_replace('/\s+/', ' ', $text), 0, 140));
@@ -338,10 +346,15 @@ final class Mailbox
     private static function mark(int $id, string $reason): bool
     {
         global $wpdb;
-        return (bool) $wpdb->query($wpdb->prepare(
+        $done = (bool) $wpdb->query($wpdb->prepare(
             'UPDATE ' . Schema::table('mail_queue') . " SET state = 'bounced', last_error = %s, updated_at = %s WHERE id = %d AND state = 'sent'",
             $reason, Cases::now(), $id
         ));
+        if ($done) {
+            $case = $wpdb->get_var($wpdb->prepare('SELECT case_id FROM ' . Schema::table('mail_queue') . ' WHERE id = %d', $id));
+            AuditLog::event('emel', 'EMEL_BOUNCE', 'E-mel ditolak penerima (bounce): ' . mb_substr($reason, 0, 200), $case ? (int) $case : null, ['emel_id' => $id], AuditLog::WARNING);
+        }
+        return $done;
     }
 
     private static function decode_header(string $v): string

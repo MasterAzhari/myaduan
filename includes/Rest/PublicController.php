@@ -1,6 +1,7 @@
 <?php
 namespace MyAduan\Rest;
 
+use MyAduan\AuditLog;
 use MyAduan\Files;
 use MyAduan\ImageProcessor;
 use MyAduan\RateLimit;
@@ -88,6 +89,9 @@ final class PublicController extends Controller
                 }
                 $result = $this->cases->create($data, $client_key, $hash, $images);
             }
+            if ($result['duplicate']) {
+                AuditLog::event('aduan', 'ADUAN_HANTAR_SEMULA', "Borang dihantar semula; rujukan asal {$result['reference']} dipulangkan", (int) $result['id']);
+            }
             return ['reference' => $result['reference'], 'duplicate' => $result['duplicate'], 'images' => count($uploads)];
         }, 201);
     }
@@ -99,7 +103,11 @@ final class PublicController extends Controller
                 throw new WorkflowException('Terlalu banyak carian. Cuba lagi kemudian.', 'rate_limited', 429);
             }
             RateLimit::hit('track', HOUR_IN_SECONDS);
-            return $this->cases->track((string) $req->get_param('query'));
+            $result = $this->cases->track((string) $req->get_param('query'));
+            // The query itself may be an IC number, so only what was found is logged.
+            $refs = array_column($result['items'], 'reference');
+            AuditLog::event('aduan', 'SEMAK_STATUS', $refs ? 'Semak status: ' . implode(', ', $refs) : 'Semak status: tiada aduan ditemui', null, ['jumpa' => count($refs)]);
+            return $result;
         });
     }
 

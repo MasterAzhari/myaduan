@@ -75,8 +75,11 @@ final class Cases
                 do_action('myaduan_case_created', $id, $reference);
                 return ['id' => $id, 'reference' => $reference, 'duplicate' => false];
             } catch (\RuntimeException $e) {
+                $db_error = $this->db->last_error;
                 $this->rollback();
                 Files::delete_paths($written);
+                AuditLog::event('sistem', 'SIMPAN_ADUAN_GAGAL', 'Aduan gagal disimpan (cubaan ' . ($attempt + 1) . '/3): ' . $e->getMessage(), null,
+                    ['langkah' => $e->getMessage(), 'db' => mb_substr($db_error, 0, 300), 'cubaan' => $attempt + 1], $attempt === 2 ? AuditLog::ERROR : AuditLog::WARNING);
                 // A concurrent request with the same key, or a reference collision: look again and retry.
                 if ($attempt === 2) {
                     throw new WorkflowException('Aduan belum dapat disimpan. Cuba hantar semula.', 'save_failed', 500);
@@ -255,6 +258,7 @@ final class Cases
         }
         if ($log) {
             $this->db->insert(Schema::table('access_log'), ['case_id' => $id, 'actor_id' => $actor['id'], 'what' => 'BUKA_KES', 'created_at' => self::now()]);
+            AuditLog::event('aduan', 'BUKA_KES', $row['reference'] . ': kes dibuka', $id);
         }
         $events = $this->db->get_results($this->db->prepare(
             'SELECT id, actor_id, event, status_from, status_to, note, changes, created_at FROM ' . Schema::table('events') . ' WHERE case_id = %d ORDER BY id DESC',
@@ -344,6 +348,7 @@ final class Cases
             throw new WorkflowException('Fail tidak ditemui.', 'not_found', 404);
         }
         $this->db->insert(Schema::table('access_log'), ['case_id' => (int) $att['case_id'], 'actor_id' => $actor['id'], 'what' => 'BUKA_FAIL', 'created_at' => self::now()]);
+        AuditLog::event('aduan', 'BUKA_FAIL', $row['reference'] . ': buka fail ' . mb_substr($att['original_name'] ?: basename($path), 0, 120), (int) $att['case_id']);
         return ['path' => $path, 'mime' => $att['mime'], 'name' => $att['original_name'] ?: basename($path)];
     }
 
