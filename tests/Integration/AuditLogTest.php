@@ -101,4 +101,19 @@ final class AuditLogTest extends TestCase
         $this->assertStringContainsString('PENGGUNA_BARU', $raw);
         $this->assertStringNotContainsString('Rahsia-Sangat-123', $raw);
     }
+
+    public function test_log_can_be_read_back_with_filters(): void
+    {
+        $this->case();
+        AuditLog::reset();
+        $this->call('POST', '/track', ['query' => 'xx']);
+        $all = \MyAduan\LogAbilities::read([]);
+        $this->assertSame(2, $all['matched']);
+        $this->assertSame('SEMAK_STATUS', $all['entries'][0]['peristiwa'], 'newest first');
+        $this->assertSame(1, \MyAduan\LogAbilities::read(['peristiwa' => 'ADUAN_BARU'])['matched']);
+        $this->assertSame(1, \MyAduan\LogAbilities::read(['level' => 'problems'])['matched']);
+        $this->assertSame(1, \MyAduan\LogAbilities::read(['limit' => 1])['returned']);
+        $files = \MyAduan\LogAbilities::files(3)['files'];
+        $this->assertSame(2, $files[0]['baris']);
+    }
 }

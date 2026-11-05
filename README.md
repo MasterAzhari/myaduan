@@ -98,6 +98,7 @@ Semua yang berlaku direkod dalam fail log private, **tak dipaparkan kepada sesia
 - Tak pernah direkod: kata laluan, isi borang, nama/IC/telefon/e-mel pengadu.
 - Bila ralat tak dijangka, pengguna nampak "Ralat sistem. Cuba sebentar lagi. (Kod: XXXXXXXX)". Kod yang sama ada dalam log (`"kod"`) dan header `X-MyAduan-Trace`.
 - Fail lebih 180 hari dipadam sendiri.
+- **MCP (WordPress 6.9+):** plugin daftar dua ability baca sahaja, `myaduan/log-files` dan `myaduan/read-log`, untuk pentadbir laman (`manage_options`) sahaja. Pasang plugin **MCP Adapter** dan sambung klien MCP di PC dengan Application Password akaun pentadbir, supaya Claude boleh baca log terus.
 
 ### Portal admin (`/adminaduan/`)
 
