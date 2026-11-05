@@ -191,8 +191,9 @@ final class Notifications
             foreach ($wpdb->get_results($wpdb->prepare("SELECT * FROM $s WHERE user_id = %d", $row['user_id']), ARRAY_A) as $sub) {
                 try {
                     $status = WebPush::send($sub['endpoint'], $sub['p256dh'], $sub['auth'], $payload);
-                } catch (\Throwable) {
+                } catch (\Throwable $e) {
                     // Keys that cannot be used are dropped; other devices still get the push.
+                    AuditLog::event('sistem', 'PUSH_RALAT', 'Push ke peranti gagal: ' . mb_substr($e->getMessage(), 0, 200), $row['case_id'] ? (int) $row['case_id'] : null, ['pengguna' => (int) $row['user_id']], AuditLog::WARNING);
                     $status = 410;
                 }
                 if ($status >= 200 && $status < 300) {

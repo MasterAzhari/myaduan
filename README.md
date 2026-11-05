@@ -88,6 +88,17 @@ define('MYADUAN_STORAGE_DIR', '/home/uXXXX/myaduan-files'); // kalau nak tukar l
 - Cron sebenar: `define('DISABLE_WP_CRON', true);` dalam `wp-config.php`, kemudian hPanel → Advanced → Cron Jobs tiap 5 minit: `php /home/uXXXX/domains/myaduan.my/public_html/wp-cron.php`.
 - LiteSpeed Cache boleh cache page `/aduan/` dan `/semak/` (tiada data peribadi dalam HTML), tapi jangan cache `/wp-json/`.
 
+### Log sistem (untuk troubleshoot)
+
+Semua yang berlaku direkod dalam fail log private, **tak dipaparkan kepada sesiapa** dalam portal atau wp-admin:
+
+- Lokasi: `../myaduan-files/log/myaduan-YYYY-MM-DD.log` (satu fail sehari, waktu Malaysia, di luar `public_html`). Buka melalui hPanel → File Manager.
+- Direkod: aduan baru, hantar semula, semak status, buka kes/fail, setiap tindakan kes, tindakan admin (pengguna, peranan, agensi, kawasan, tetapan, import), log masuk/keluar/gagal, e-mel (dihantar, gagal, bounce, balasan agensi, mailbox), push, kemas kini plugin, dan semua ralat (termasuk PHP fatal).
+- Satu baris JSON setiap peristiwa: masa, tahap (info/warning/error), siapa, kes, kod, IP, permintaan API, HTTP, masa proses dan butiran.
+- Tak pernah direkod: kata laluan, isi borang, nama/IC/telefon/e-mel pengadu.
+- Bila ralat tak dijangka, pengguna nampak "Ralat sistem. Cuba sebentar lagi. (Kod: XXXXXXXX)". Kod yang sama ada dalam log (`"kod"`) dan header `X-MyAduan-Trace`.
+- Fail lebih 180 hari dipadam sendiri.
+
 ### Portal admin (`/adminaduan/`)
 
 - Halaman sendiri di luar tema (laluan boleh ubah dalam Tetapan → MyAduan). Belum log masuk → dihantar ke login WordPress, kemudian balik ke portal.

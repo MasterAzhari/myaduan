@@ -1,6 +1,7 @@
 <?php
 namespace MyAduan\Rest;
 
+use MyAduan\AuditLog;
 use MyAduan\Cases;
 use MyAduan\WorkflowException;
 
@@ -31,8 +32,11 @@ abstract class Controller
         } catch (WorkflowException $e) {
             return new \WP_Error('myaduan_' . $e->error_code(), $e->getMessage(), ['status' => $e->status()]);
         } catch (\Throwable $e) {
-            error_log('[myaduan] ' . get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
-            return new \WP_Error('myaduan_error', 'Ralat sistem. Cuba sebentar lagi.', ['status' => 500]);
+            $trace = AuditLog::trace();
+            error_log("[myaduan $trace] " . get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+            AuditLog::exception($e);
+            // The code lets a user's report be matched to the full error in the log.
+            return new \WP_Error('myaduan_error', "Ralat sistem. Cuba sebentar lagi. (Kod: $trace)", ['status' => 500, 'trace' => $trace]);
         }
     }
 }

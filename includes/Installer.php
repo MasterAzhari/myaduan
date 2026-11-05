@@ -31,6 +31,8 @@ final class Installer
     {
         if ((int) get_option(self::DB_OPTION) < MYADUAN_DB_VERSION) {
             self::install();
+        } elseif (get_option('myaduan_version') !== MYADUAN_VERSION) {
+            self::note_version();
         }
     }
 
@@ -47,6 +49,18 @@ final class Installer
         Storage::ensure_root();
         Keys::ensure();
         update_option(self::DB_OPTION, MYADUAN_DB_VERSION, false);
+        self::note_version();
+    }
+
+    /** Logs each new plugin version once, so the log shows when an upload happened. */
+    private static function note_version(): void
+    {
+        $from = (string) get_option('myaduan_version', '');
+        if ($from === MYADUAN_VERSION) {
+            return;
+        }
+        update_option('myaduan_version', MYADUAN_VERSION, false);
+        AuditLog::event('sistem', 'PLUGIN_DIKEMAS_KINI', $from === '' ? 'MyAduan ' . MYADUAN_VERSION . ' dipasang' : "MyAduan dikemas kini $from → " . MYADUAN_VERSION, null, ['db' => MYADUAN_DB_VERSION]);
     }
 
     private static function roles(): void
