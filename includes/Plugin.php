@@ -14,6 +14,7 @@ final class Plugin
     public static function boot(): void
     {
         AuditLog::register();
+        LogAbilities::register();
         Installer::maybe_upgrade();
         add_action('rest_api_init', [self::class, 'register_routes']);
         add_action('admin_notices', [self::class, 'health_notice']);
